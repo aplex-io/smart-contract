@@ -65,9 +65,9 @@ contract BasicToken is ERC20Basic {
   */
   function transfer(address _to, uint256 _value) public returns (bool) {
     require(_to != address(0));
-    var sndr=msg.sender;
+   
     // SafeMath.sub will throw if there is not enough balance.
-    balances[sndr] = balances[sndr].sub(_value);
+    balances[msg.sender] = balances[msg.sender].sub(_value);
     balances[_to] = balances[_to].add(_value);
     Transfer(msg.sender, _to, _value);
     return true;
@@ -243,16 +243,7 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
      
      }
     
-    /* modifier isSaleAgentOrOwner {
-         require(address(selector)!=0x0 || msg.sender==owner());
-         require(saleAgent != 0x0 || msg.sender==owner());
-         require(VersionSelector(selector).getCurSaleAgentAddress() == msg.sender || msg.sender==owner()); //проверяем установлен ли saleAgent в VersionSelector 
-         //Можно ещё проверку текущего адреса токена в version selector проверить, но по идее это не здесь
-         require(msg.sender == saleAgent || msg.sender==owner());
-         _;
-     }*/
-     
-     modifier isSaleAgentOrOwner {
+        modifier isSaleAgentOrOwner {
          if (msg.sender == owner())
          {
             _;
@@ -323,39 +314,7 @@ contract APLXToken is BurnableToken, WithSaleAgent {
         balances[msg.sender] = initial_supply;
     }
 
-   function getAccountInvestment(address _investor) public view returns(uint curEther)
-   {
-        uint tokens=balances[_investor];
-        if (tokens==0 )
-            return 0;
-        
-         require(address(selector)!=0x0);
-         require(saleAgent != 0x0);
-         require(VersionSelector(selector).getCurSaleAgentAddress() == getAgent());
-        
-        //при вычислении таким образом возвращается значение с бонусами, ну можно назвать это бонус за владение токенами
-        //в реальности могло быть потрачено меньше (выход  - хранить реальные цифры затрат или струтктуру реал, добавлено)
-        curEther = tokens.div(Sale(getAgent()).rate()); //пока без учета decimals
-        
-   }
-
-   /* modifier onlyOwnerOrContractsWithSameOwner() {
-        uint codeLength;
-        address snd=msg.sender;
-        assembly
-        {
-            codeLength := extcodesize(snd)
-        }
-
-        if (codeLength > 0) {
-            Ownable sender = Ownable(msg.sender);
-        }
-
-        require(msg.sender == owner() || (codeLength > 0 && address(sender) != 0x0 && sender.owner() == owner()));
-        _;
-    }*/
-    
-    
+ 
     
    /* function transferFromOwner(address _to, uint _value) public isSaleAgentOrOwner returns (bool) {
         require(_to != address(0));
@@ -376,17 +335,17 @@ contract APLXToken is BurnableToken, WithSaleAgent {
      
      function getAgentBalance() public view returns (uint agentbalance)
      {
-        require(saleAgent!=0);
+        require(saleAgent!=0x0);
         return balances[saleAgent];
      }
      
     function transferFromAgent(address _to, uint _value) public isSaleAgent returns (bool) {
-        require(_to != address(0));
+        require(_to != 0x0);
         return  transfer(_to, _value);
     } 
      
     function transferToAgent(uint _value) public returns (bool) {
-        require(saleAgent != address(0));
+        require(saleAgent != 0x0);
         
         return transfer(saleAgent, _value);
     }
@@ -474,10 +433,10 @@ contract VersionSelector is Ownable {
     
     function CreatePresale() public onlyOwner  {
         require(address(curTokenAddress) != 0x0);
-        address psa=address(new PreSale(address(this)));
-        require(psa!=0x0);
-       // uint amount=Sale(psa).saleTokenLimit();  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
-       uint amount=1000000000000000000000000;
+        Sale psa=new PreSale(this);
+        require(address(psa)!=0x0);
+       uint amount=psa.saleTokenLimit();//  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
+       //test uint amount=2000000000000000000000;//1000000000000000000000000;
         if (curTokenAddress.setSaleAgent(address(psa)))
         {
             
@@ -502,10 +461,10 @@ contract VersionSelector is Ownable {
     function CreateMainsale() public onlyOwner returns (address) {
         
         require(address(curTokenAddress) != 0x0);
-        address msa=new MainSale(address(this));
-        require(msa!=0x0);
-        //uint amount=MainSale(msa).saleTokenLimit(); см. PreSale
-        uint amount=25000000000000000000000000;
+        MainSale msa=new MainSale(this);
+        require(address(msa)!=0x0);
+        uint amount=msa.saleTokenLimit();
+        //uint amount=25000000000000000000000000;
         if (curTokenAddress.setSaleAgent(msa))
         {
             
@@ -515,7 +474,7 @@ contract VersionSelector is Ownable {
                 curSaleAgentAddress = msa;
                 return msa;
             }
-            PreSale(msa).killme();
+           MainSale(msa).killme();
         }
         
         MainSale(msa).killme();
@@ -580,11 +539,7 @@ contract Sale is Ownable, WithVersionSelector {
         buyTokens();
     }
 
-    function getTokenSaleAgent() public constant returns(address agent)
-    {
-        agent = token.getAgent();
-    }
-
+   
     modifier saleIsOn() {
         //@Lavrentiy Tsvetkov - насколько стоит заморачиваться по проблеме now? (зависит от времени у майнера текущего блока)
         require(now > start && now < saleEnd());
@@ -605,8 +560,10 @@ contract PreSale is Sale {
         restrictedPercent = 25;
         rate = 1000;
         start = 1517868326;
-        period = 10;
-        saleTokenLimit = 1000000000000000000000000;
+        period = 30;
+        saleTokenLimit = 1000000 * 1 ether;
+        //test saleTokenLimit = 2000 * 1 ether;
+        
     }
 
    uint presaleBonusPercent=40;
@@ -621,22 +578,53 @@ contract PreSale is Sale {
         }
         res = false;
     }
+    
+    
+    
+    function Max2BuyTokens() public view returns (uint max2buy)
+    {
+       max2buy = myBalance().mul(10000).div(restrictedPercent.mul(100).add(presaleBonusPercent.mul(100)).add(restrictedPercent.mul(presaleBonusPercent)).add(10000));
+    }
+    
+    function Max2SpendWei() public view returns (uint maxwei)
+    {
+       maxwei = Max2BuyTokens().div(rate);
+    }
 
     function buyTokens() public saleIsOn payable {
-          multisig.transfer(msg.value);
         
         
-        // надо ещё раз с минимальным вложением проверить, чтобы не получлось перевода  эфира,  а купили ноль токенов
+        
         uint tokens = rate.mul(msg.value);
         
         uint bonus;
         bonus = tokens.mul(presaleBonusPercent).div(100);
          
         uint bonused = tokens.add(bonus);
-        token.transferFromAgent(msg.sender, bonused);
-       
         uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
-        token.transferFromAgent(restricted, restrictedTokens);
+        uint totaltokens=bonused.add(restrictedTokens);
+        if ( totaltokens <= myBalance())
+        {
+            multisig.transfer(msg.value);
+            token.transferFromAgent(msg.sender, bonused);
+            token.transferFromAgent(restricted, restrictedTokens);
+        }
+        else
+        {
+            //вычисляем макимально возможное количество токенов к покупке
+            uint max2buy=Max2BuyTokens();
+            uint maxbonus=max2buy.mul(presaleBonusPercent).div(100);
+            uint maxbonused=max2buy.add(maxbonus);
+            uint maxwei=max2buy.div(rate);
+            //сдача 
+            uint change=msg.value.sub(maxwei); 
+            multisig.transfer(maxwei);
+            
+            token.transferFromAgent(msg.sender, maxbonused);
+            token.transferFromAgent(restricted, maxbonused.mul(restrictedPercent).div(100));
+           
+            msg.sender.transfer(change); //НЕ ПОЛУЧИТСЯ ЛИ ЗДЕСЬ ПОШАЛИТЬ ЧЕРЕЗ fallback() sender-а?
+        }
 
     }
     
@@ -653,17 +641,13 @@ contract MainSale is Sale {
         rate = 1000;
         start = 1515319200;
         period = 30;
-        saleTokenLimit = 25000000000000000000000000;
+        saleTokenLimit = 25000000 * 1 ether;
     }
 
    
 
     function buyTokens() public saleIsOn payable {
-     
-        multisig.transfer(msg.value);
-        
-        
-        // надо ещё раз с минимальным вложением проверить, чтобы не получлось перевода  эфира,  а купили ноль токенов
+      
         uint tokens = rate.mul(msg.value);
        
        
@@ -723,10 +707,19 @@ contract MainSale is Sale {
         
         
         uint bonused = tokens.add(qbonus).add(tbonus);
-        token.transferFromAgent(msg.sender, bonused);
+        
        
         uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
-        token.transferFromAgent(restricted, restrictedTokens);
+       
+        
+        uint totaltokens=bonused.add(restrictedTokens);
+        require ( totaltokens <= myBalance());
+        //пока без сдачи здесь, 
+        {
+            multisig.transfer(msg.value);
+            token.transferFromAgent(msg.sender, bonused);
+            token.transferFromAgent(restricted, restrictedTokens);
+        }
 
     }
     
@@ -751,25 +744,41 @@ contract MainSale2 is Sale {
         rate = 1000;
         start = 1515319200;
         period = 28;
-        saleTokenLimit = 15000000000000000000000000;
+        saleTokenLimit = 15000000 * 1 ether;
     }
 
-   
+    function Max2BuyTokens() public view returns (uint max2buy)
+    {
+       max2buy = myBalance().mul(100).div(restrictedPercent.add(100));
+    }
+    
 
-    function buyTokens() public saleIsOn payable {
-     
+    function buyTokens() public saleIsOn payable 
+    {
         multisig.transfer(msg.value);
-        
-        
-        // надо ещё раз с минимальным вложением проверить, чтобы не получлось перевода  эфира,  а купили ноль токенов
         uint tokens = rate.mul(msg.value);
        
-       
-        token.transferFromAgent(msg.sender, tokens);
-       
         uint restrictedTokens = tokens.mul(restrictedPercent).div(100);
-        token.transferFromAgent(restricted, restrictedTokens);
-
+        uint totaltokens=tokens.add(restrictedTokens);
+        if ( totaltokens <= myBalance())
+        {
+            token.transferFromAgent(restricted, restrictedTokens);
+            token.transferFromAgent(msg.sender, tokens); 
+        }
+        else
+        {
+            //вычисляем макимально возможное количество токенов к покупке
+            uint max2buy=Max2BuyTokens();
+            uint maxwei=max2buy.div(rate);
+            //сдача 
+            uint change=msg.value.sub(maxwei); 
+            multisig.transfer(maxwei);
+            
+            token.transferFromAgent(msg.sender, max2buy);
+            token.transferFromAgent(restricted, max2buy.mul(restrictedPercent).div(100));
+           
+            msg.sender.transfer(change);
+        }
     }
     
     function finalizeSale() public onlyOwner returns (bool res)
