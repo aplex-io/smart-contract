@@ -644,10 +644,7 @@ contract PreSale is Sale {
         stagenum=0;
         selector = VersionSelector(_versionSelectorAddress);
         multisig = 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
-        restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
-        bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        restrictedPercent = 15;
-        bountyPercent=10;
+       
         rate = 1000;
         start = 1517868326;
         period = 30;
@@ -679,8 +676,7 @@ contract PreSale is Sale {
     
     function Max2BuyTokens() public view returns (uint max2buy)
     {
-        uint percent=restrictedPercent.add(bountyPercent);
-       uint max = myBalance().mul(10000).div(percent.mul(100).add(presaleBonusPercent.mul(100)).add(percent.mul(presaleBonusPercent)).add(10000));
+       uint max = myBalance().mul(100).div(presaleBonusPercent.add(100));
        max2buy=max.div(rate).mul(rate);
     }
     
@@ -696,9 +692,8 @@ contract PreSale is Sale {
         bonus = tokens.mul(presaleBonusPercent).div(100);
          
         uint bonused = tokens.add(bonus);
-        uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
-        uint bountyTokens = bonused.mul(bountyPercent).div(100);
-        uint totaltokens=bonused.add(restrictedTokens).add(bountyTokens);
+       
+        uint totaltokens=bonused;
         require( totaltokens <= myBalance());
         multisig.transfer(msg.value);
         
@@ -706,8 +701,7 @@ contract PreSale is Sale {
         InvestmentsStorage ist = InvestmentsStorage(vs.curInvestmentsStorageAddress());
         ist.AddWei(msg.sender, msg.value , stagenum);
         
-        token.transferFromAgent(restricted, restrictedTokens);
-        token.transferFromAgent(bounty, bountyTokens);
+       
         token.transferFromAgent(msg.sender, bonused); 
        
         
