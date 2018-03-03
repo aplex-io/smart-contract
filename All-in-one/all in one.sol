@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.18;
+﻿pragma solidity ^0.4.20;
 
 library SafeMath {
   function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -235,13 +235,80 @@ contract WithVersionSelector
     
 }
 
+/**
+ * @title Mintable token
+ * @dev Simple ERC20 Token example, with mintable token creation
+ * @dev Issue: * https://github.com/OpenZeppelin/zeppelin-solidity/issues/120
+ * Based on code by TokenMarketNet: https://github.com/TokenMarketNet/ico/blob/master/contracts/MintableToken.sol
+ */
+
+contract MintableToken is StandardToken, Ownable {
+  event Mint(address indexed to, uint256 amount);
+  event MintFinished();
+
+  bool public mintingFinished = false;
+
+
+  modifier canMint() {
+    require(!mintingFinished);
+    _;
+  }
+
+  /**
+   * @dev Function to mint tokens
+   * @param _to The address that will receive the minted tokens.
+   * @param _amount The amount of tokens to mint.
+   * @return A boolean that indicates if the operation was successful.
+   */
+  function mint(address _to, uint256 _amount) onlyOwner canMint public returns (bool) {
+    totalSupply = totalSupply.add(_amount);
+    balances[_to] = balances[_to].add(_amount);
+    Mint(_to, _amount);
+    Transfer(address(0), _to, _amount);
+    return true;
+  }
+
+  /**
+   * @dev Function to stop minting new tokens.
+   * @return True if the operation was successful.
+   */
+  function finishMinting() onlyOwner canMint public returns (bool) {
+    mintingFinished = true;
+    MintFinished();
+    return true;
+  }
+} 
+
 contract WithSaleAgent is Ownable, WithVersionSelector {
     
      address internal saleAgent;
+     mapping(address => uint256) blocked;
+     uint public endSales=0;
+     bool blockExchange=true;
+     
      
      function WithSaleAgent(address _selector) WithVersionSelector(_selector) public {
      
      }
+    
+    function AddBlockTime(address blocking, uint time) public isSaleAgent
+    {
+        blocked[blocking]=time;
+    }
+    
+     
+     function setEndSales() public isSaleAgent 
+     {
+       
+        endSales=now;
+        
+    } 
+    
+    function UnblockExchange() public onlyOwner
+    {
+        blockExchange = false;
+    }
+
     
         modifier isSaleAgentOrOwner {
          if (msg.sender == owner())
@@ -303,12 +370,20 @@ contract InvestmentsStorage is WithVersionSelector {
     mapping(address => uint256) investor2wei;
     
     function investmentOf(address investor) public constant returns (uint256 balance) {
-    return investor2wei[investor];
+    balance = investor2wei[investor];
   }
     
-    uint presalewei=0;
-    uint mainsalewei=0;
-    uint mainsale2wei=0;
+    uint public presalewei=0;
+    uint public mainsalewei=0;
+    uint public mainsale2wei=0;
+    uint public constant softcap=8000 * 1 ether;
+    
+    bool blockWithdraw = true;
+    
+    uint public transferred2Multisig=0;
+    
+    
+    address constant multisig=0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
     
     function InvestmentsStorage(address _versionSelectorAddress) WithVersionSelector(_versionSelectorAddress) public
     {
@@ -323,24 +398,60 @@ contract InvestmentsStorage is WithVersionSelector {
     {
         require(selector!=0 && msg.sender==address(VersionSelector(selector).curSaleAgentAddress()));
         investor2wei[investor]=investor2wei[investor].add(weis);
+        
         if (stagenum==0)
         {
             presalewei=presalewei.add(weis);
-            return;
         }
         if (stagenum==1)
         {
             mainsalewei=mainsalewei.add(weis);
-            return;
         }
         if (stagenum==2)
         {
             mainsale2wei=mainsale2wei.add(weis);
-            return;
+        }
+        
+        if (GetTotalInvestments()>=softcap)
+        {
+            TranferAll2Multisig();
         }
     }
     
+    function TranferAll2Multisig() private
+    {
+        uint val=this.balance;
+        multisig.transfer(val);
+        transferred2Multisig.add(val);
+    }
+    
+    
+    function finalizeLastStage() public
+    {
+            require(selector!=0 && msg.sender==address(VersionSelector(selector)));
+            if (GetTotalInvestments()<softcap)
+            {
+                blockWithdraw=false;
+            }
+            else
+            {
+                TranferAll2Multisig();
+            }
+    }
+    
+    function WithdrawMyInvetments() public
+    {
+        require(!blockWithdraw);
+        investor2wei[msg.sender]=0;
+        msg.sender.transfer(investor2wei[msg.sender]);
+    }
+    
+    
 }
+
+
+
+
 
 contract APLXToken is BurnableToken, WithSaleAgent {
 
@@ -350,32 +461,26 @@ contract APLXToken is BurnableToken, WithSaleAgent {
 
     uint32 public constant decimals = 18;
     
-    uint256 public initial_supply = 41000000 * 1 ether;
+    uint256 public constant initial_supply = 41000000 * 1 ether;
+    
+   
+    
+   
+   
 
-   function APLXToken(address _selector) WithSaleAgent(_selector)  public {
+    function APLXToken(address _selector) WithSaleAgent(_selector)  public {
         totalSupply = initial_supply;
         balances[msg.sender] = initial_supply;
     }
 
- 
-    
-   /* function transferFromOwner(address _to, uint _value) public isSaleAgentOrOwner returns (bool) {
-        require(_to != address(0));
-        address _from=owner();
-        balances[_from] = balances[_from].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        Transfer(_from, _to, _value);
-        return true;
+    function BurnWithExchange(ExchanableFromAPLX exto, uint amount) public
+    {
+        require(!blockExchange && balances[msg.sender]>=amount);
+        burn(amount);
+        exto.MintForExchange(msg.sender, amount);
     }
-    
-     function burnAllOwned() public isSaleAgentOrOwner returns (bool)
-     {
-        var value=totalSupply - balances[owner()];
-        totalSupply = value;
-        balances[owner()] = 0;
-        Burn(owner(), value);
-     }*/
-     
+ 
+ 
      function getAgentBalance() public view returns (uint agentbalance)
      {
         require(saleAgent!=0x0);
@@ -387,12 +492,34 @@ contract APLXToken is BurnableToken, WithSaleAgent {
         transfer(_to, _value);
         
     } 
+   
      
     function transferToAgent(uint _value) public onlyOwner returns (bool) {
         require(saleAgent != 0x0);
         
         return transfer(saleAgent, _value);
     }
+    
+    function ValidateTransfer() public view returns(bool)
+    {
+        if (endSales == 0)
+            return false;
+        else
+        {
+            return endSales.add(blocked[msg.sender]) < now;
+            
+        }
+         
+    }
+    
+    
+    function transfer(uint _value, address _to) public onlyOwner returns (bool) {
+
+        require(ValidateTransfer());        
+        return transfer(_to,  _value);
+    }
+    
+
     
     function burnAllOfAgent() public isSaleAgent returns (bool)
      {
@@ -401,7 +528,25 @@ contract APLXToken is BurnableToken, WithSaleAgent {
    
 }
 
-
+contract ExchanableFromAPLX is WithVersionSelector, MintableToken
+{
+    using SafeMath for uint;
+    
+    function ExchanableFromAPLX(address _versionSelectorAddress) public WithVersionSelector(_versionSelectorAddress)
+    {
+        
+    }
+    
+    
+    function MintForExchange(address holder, uint _amount)  public
+    {
+        require(selector!=0x0 && VersionSelector(selector).curAPLXTokenAddress()==msg.sender);
+        totalSupply = totalSupply.add(_amount);
+        balances[holder] = balances[holder].add(_amount);
+        Mint(holder, _amount);
+        Transfer(address(0), holder, _amount);
+    }
+}
 
 
 /**
@@ -413,15 +558,15 @@ contract APLXToken is BurnableToken, WithSaleAgent {
 contract VersionSelector is Ownable {
 
     WithSaleAgent public curAPLXTokenAddress;
-    address public curAPLCTokenAddress;
+    ExchanableFromAPLX public curAPLCTokenAddress;
     address public curMarketAddress;
     address public curSaleAgentAddress;
-    address public curInvestmentsStorageAddress;
+    InvestmentsStorage public investmentsStorage;
     
     
 
     function VersionSelector() public {
-        curInvestmentsStorageAddress=address(new InvestmentsStorage(address(this)));
+        investmentsStorage=new InvestmentsStorage(address(this));
     }
 
   function setCurMarketAddress(address _newaddr) public onlyOwner {
@@ -429,14 +574,15 @@ contract VersionSelector is Ownable {
       curMarketAddress = _newaddr;
   }
  
-  function setCurInvestmentsStorageAddress(address _newaddr) public onlyOwner {
-     
-      curInvestmentsStorageAddress = _newaddr;
- }
-
-   function setCurAPLXTokenAddress(address _newaddr) public onlyOwner {
+  function setCurAPLXTokenAddress(address _newaddr) public onlyOwner {
        
       curAPLXTokenAddress = WithSaleAgent(_newaddr);
+      
+   }
+   
+    function setCurAPLCTokenAddress(address _newaddr) public onlyOwner {
+       
+      curAPLCTokenAddress = ExchanableFromAPLX(_newaddr);
       
    }
    
@@ -448,6 +594,11 @@ contract VersionSelector is Ownable {
            
       }
      
+  }
+  
+  function UnblockExchangeAPLX() public onlyOwner
+  {
+      curAPLXTokenAddress.UnblockExchange();
   }
 
 // 
@@ -466,6 +617,10 @@ contract VersionSelector is Ownable {
         if (Sale(curSaleAgentAddress).finalizeSale())
         {
             setCurSaleAgentAddress(0);
+            if (WithSaleAgent(curAPLXTokenAddress).endSales()!=0)
+            {
+                investmentsStorage.finalizeLastStage();
+            }
             res = true;   
         }
     }
@@ -473,14 +628,14 @@ contract VersionSelector is Ownable {
     
     //Функции Create**** сделаны для удобства отладки и позволяют сразу становится 
     // владельцем создаваемых контрактов. При необходимости создания новой версии извне
-    // нужно будет  высталять агента продажи в токене а потом вызывать tranferownership(адрес VS) у регистрируемого контракта 
+    // нужно будет  выставлять агента продажи в токене а потом вызывать tranferownership(адрес VS) у регистрируемого контракта 
     
     function CreatePresale() public onlyOwner  {
         require(address(curAPLXTokenAddress) != 0x0);
         Sale psa=new PreSale(this);
         require(address(psa)!=0x0);
-        uint amount=psa.saleTokenLimit();//  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
-        //uint amount=1300;//1000000000000000000000000;
+        //uint amount=psa.saleTokenLimit();//  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
+        uint amount=1000000000000000000000000; //1300
         if (curAPLXTokenAddress.setSaleAgent(address(psa)))
         {
             
@@ -571,8 +726,12 @@ contract Sale is Ownable, WithVersionSelector {
     uint restrictedPercent;
 
     uint bountyPercent;
+    
+    uint reservedPercent;
 
     address restricted;
+    
+    address reserved;
     
     address bounty;
     
@@ -608,7 +767,7 @@ contract Sale is Ownable, WithVersionSelector {
     
     function canIBuy() public view returns (bool res)
     {
-        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && Max2SpendWei()>0 && VersionSelector(selector).curInvestmentsStorageAddress()!=0;
+        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && Max2SpendWei()>0 && address(VersionSelector(selector).investmentsStorage())!=0;
     }
     
     function sold() public view returns (uint) { return saleTokenLimit.sub(token.getAgentBalance()); }
@@ -698,10 +857,8 @@ contract PreSale is Sale {
         multisig.transfer(msg.value);
         
         VersionSelector vs=VersionSelector(selector);
-        InvestmentsStorage ist = InvestmentsStorage(vs.curInvestmentsStorageAddress());
+        InvestmentsStorage ist = vs.investmentsStorage();
         ist.AddWei(msg.sender, msg.value , stagenum);
-        
-       
         token.transferFromAgent(msg.sender, bonused); 
        
         
@@ -711,18 +868,26 @@ contract PreSale is Sale {
 contract MainSale is Sale {
   
     function MainSale(address _versionSelectorAddress) Sale(_versionSelectorAddress) public {
+    
+        saleTokenLimit = 25000000 * 1 ether;
         stagenum=1;
         selector = VersionSelector(_versionSelectorAddress);
-        multisig = 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
+        multisig = address(VersionSelector(selector).investmentsStorage());
+        
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        restrictedPercent = 15;
-        bountyPercent=10;
+        reserved= 0x1e3a50282711B856BF9618cCa8c18ec7B80f9657;
+        
+        token.AddBlockTime(restricted, 1 years);
+        token.AddBlockTime(reserved, 1 years);
+        
+        restrictedPercent = 10;
+        reservedPercent=5;
+        bountyPercent=5;
+        
         rate = 1000;
         start = 1519761460;
         period = 30;
-        saleTokenLimit = 25000000 * 1 ether;
-        
     }
 
    
@@ -757,7 +922,7 @@ contract MainSale is Sale {
             tpercent=20; //если 1 день, то 20%
         }
         
-        uint percent=restrictedPercent.add(bountyPercent);
+        uint percent=restrictedPercent.add(bountyPercent).add(reservedPercent);
         
         uint maxwei=1000 ether;
         uint maxbonused=maxwei.mul(rate).mul(tpercent.add(20)).div(100);
@@ -871,16 +1036,18 @@ contract MainSale is Sale {
        
         uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
         uint bountyTokens = bonused.mul(bountyPercent).div(100);
-        uint totaltokens=bonused.add(restrictedTokens).add(bountyTokens);
+        uint reservedTokens = bonused.mul(reservedTokens).div(100);
+        uint totaltokens=bonused.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
         require( totaltokens <= myBalance());
         multisig.transfer(msg.value);
         
         VersionSelector vs=VersionSelector(selector);
-        InvestmentsStorage ist = InvestmentsStorage(vs.curInvestmentsStorageAddress());
+        InvestmentsStorage ist = vs.investmentsStorage();
         ist.AddWei(msg.sender, msg.value , stagenum);
         
         token.transferFromAgent(restricted, restrictedTokens);
         token.transferFromAgent(bounty, bountyTokens);
+        token.transferFromAgent(reserved,restrictedTokens);
         token.transferFromAgent(msg.sender, bonused); 
         
 
@@ -907,42 +1074,51 @@ contract MainSale2 is Sale {
   
     function MainSale2(address _versionSelectorAddress) Sale(_versionSelectorAddress) public {
         stagenum=2;
+        saleTokenLimit = 15000000 * 1 ether;
         selector = VersionSelector(_versionSelectorAddress);
-        multisig = 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
+        multisig = address(VersionSelector(selector).investmentsStorage());
+      
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        restrictedPercent = 15;
-        bountyPercent=10;
+        reserved= 0x1e3a50282711B856BF9618cCa8c18ec7B80f9657;
+        
+        token.AddBlockTime(restricted, 1 years);
+        token.AddBlockTime(reserved, 1 years);
+      
+        restrictedPercent = 10;
+        reservedPercent=5;
+        bountyPercent=5;
+    
         rate = 1000;
         start = 1515319200;
         period = 28;
-        saleTokenLimit = 15000000 * 1 ether;
+        
     }
 
     function Max2BuyTokens() public view returns (uint max2buy)
     {
-       uint max = myBalance().mul(100).div(restrictedPercent.add(bountyPercent).add(100));
+       uint max = myBalance().mul(100).div(restrictedPercent.add(bountyPercent).add(reservedPercent).add(100)); //проверить!!
        max2buy=max.div(rate).mul(rate); //обнуляем остаток
     }
     
 
     function buyTokens() public canBuy  payable
     {
-        
         uint tokens = rate.mul(msg.value);
-       
         uint restrictedTokens = tokens.mul(restrictedPercent).div(100);
         uint bountyTokens = tokens.mul(bountyPercent).div(100);
-        uint totaltokens=tokens.add(restrictedTokens).add(bountyTokens);
+        uint reservedTokens = tokens.mul(reservedPercent).div(100);
+        uint totaltokens=tokens.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
         require( totaltokens <= myBalance());
         multisig.transfer(msg.value);
         
         VersionSelector vs=VersionSelector(selector);
-        InvestmentsStorage ist = InvestmentsStorage(vs.curInvestmentsStorageAddress());
+        InvestmentsStorage ist = vs.investmentsStorage();
         ist.AddWei(msg.sender, msg.value , stagenum);
         
         token.transferFromAgent(restricted, restrictedTokens);
         token.transferFromAgent(bounty, bountyTokens);
+        token.transferFromAgent(reserved, reservedTokens);
         token.transferFromAgent(msg.sender, tokens); 
        
     }
@@ -952,12 +1128,14 @@ contract MainSale2 is Sale {
         if (now > saleEnd())
         {
            token.burnAllOfAgent();
+           token.setSaleAgent(0);
            res=true;
         }
         
         if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
+            token.setEndSales();
             res=true;
         }
         
@@ -965,6 +1143,7 @@ contract MainSale2 is Sale {
         //....
         //res = true;
         //...
+      
         res=false;
        
     }
