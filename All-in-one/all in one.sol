@@ -473,10 +473,11 @@ contract APLXToken is BurnableToken, WithSaleAgent {
         balances[msg.sender] = initial_supply;
     }
 
-    function BurnWithExchange(ExchanableFromAPLX exto, uint amount) public
+    function BurnWithExchange(uint amount) public
     {
-        require(!blockExchange && balances[msg.sender]>=amount);
+        require(!blockExchange && balances[msg.sender]>=amount && VersionSelector(selector).curAPLCTokenAddress() != address(0));
         burn(amount);
+        ExchangableFromAPLX exto=ExchangableFromAPLX(VersionSelector(selector).curAPLCTokenAddress());
         exto.MintForExchange(msg.sender, amount);
     }
  
@@ -528,11 +529,11 @@ contract APLXToken is BurnableToken, WithSaleAgent {
    
 }
 
-contract ExchanableFromAPLX is WithVersionSelector, MintableToken
+contract ExchangableFromAPLX is WithVersionSelector, MintableToken
 {
     using SafeMath for uint;
     
-    function ExchanableFromAPLX(address _versionSelectorAddress) public WithVersionSelector(_versionSelectorAddress)
+    function ExchangableFromAPLX(address _versionSelectorAddress) public WithVersionSelector(_versionSelectorAddress)
     {
         
     }
@@ -558,7 +559,7 @@ contract ExchanableFromAPLX is WithVersionSelector, MintableToken
 contract VersionSelector is Ownable {
 
     WithSaleAgent public curAPLXTokenAddress;
-    ExchanableFromAPLX public curAPLCTokenAddress;
+    ExchangableFromAPLX public curAPLCTokenAddress;
     address public curMarketAddress;
     address public curSaleAgentAddress;
     InvestmentsStorage public investmentsStorage;
@@ -582,7 +583,7 @@ contract VersionSelector is Ownable {
    
     function setCurAPLCTokenAddress(address _newaddr) public onlyOwner {
        
-      curAPLCTokenAddress = ExchanableFromAPLX(_newaddr);
+      curAPLCTokenAddress = ExchangableFromAPLX(_newaddr);
       
    }
    
