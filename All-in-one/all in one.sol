@@ -195,30 +195,27 @@ contract BurnableToken is /*StandardToken*/ BasicToken {
 
 contract Ownable {
     
-  address private  _owner;
+  address public  owner;
   
-  function owner() public constant returns(address o)
-  {
-    o=_owner;
-  }
+ 
  
  
   
   
   function Ownable() public {
-    _owner = msg.sender;
+    owner = msg.sender;
   }
  
  
   modifier onlyOwner() {
-    require(msg.sender == _owner);
+    require(msg.sender == owner);
     _;
   }
  
   
   function transferOwnership(address newOwner) public onlyOwner {
     require(newOwner != address(0));      
-    _owner = newOwner;
+    owner = newOwner;
   }
  
 }
@@ -311,7 +308,7 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
 
     
         modifier isSaleAgentOrOwner {
-         if (msg.sender == owner())
+         if (msg.sender == owner)
          {
             _;
          }
@@ -378,7 +375,7 @@ contract InvestmentsStorage is WithVersionSelector {
     uint public mainsale2wei=0;
     uint public constant softcap=8000 * 1 ether;
     
-    bool blockWithdraw = true;
+    bool public blockWithdraw = true;
     
     uint public transferred2Multisig=0;
     
@@ -390,6 +387,13 @@ contract InvestmentsStorage is WithVersionSelector {
     
     }
     
+    function() public payable { }
+    
+    function  getBalance() public view returns(uint)
+    {
+        return this.balance;
+    }
+    
     function GetTotalInvestments() public view returns(uint) {
         return presalewei.add(mainsalewei).add(mainsale2wei);
     }
@@ -397,7 +401,7 @@ contract InvestmentsStorage is WithVersionSelector {
     function AddWei(address investor, uint weis, uint stagenum) public 
     {
         require(selector!=0 && msg.sender==address(VersionSelector(selector).curSaleAgentAddress()));
-        investor2wei[investor]=investor2wei[investor].add(weis);
+        
         
         if (stagenum==0)
         {
@@ -406,10 +410,12 @@ contract InvestmentsStorage is WithVersionSelector {
         if (stagenum==1)
         {
             mainsalewei=mainsalewei.add(weis);
+            investor2wei[investor]=investor2wei[investor].add(weis);
         }
         if (stagenum==2)
         {
             mainsale2wei=mainsale2wei.add(weis);
+            investor2wei[investor]=investor2wei[investor].add(weis);
         }
         
         if (GetTotalInvestments()>=softcap)
@@ -439,11 +445,20 @@ contract InvestmentsStorage is WithVersionSelector {
             }
     }
     
-    function WithdrawMyInvetments() public
+    function WithdrawMyInvestments() public
     {
         require(!blockWithdraw);
+       
+        uint bal=0;
+        if (VersionSelector(selector).curAPLXTokenAddress()!=0)
+        {
+            bal=BasicToken(VersionSelector(selector).curAPLXTokenAddress()).balanceOf(msg.sender);
+        }
+        require(bal==0);
+        uint val=investor2wei[msg.sender];
         investor2wei[msg.sender]=0;
-        msg.sender.transfer(investor2wei[msg.sender]);
+        msg.sender.transfer(val);
+       
     }
     
     
@@ -490,7 +505,7 @@ contract APLXToken is BurnableToken, WithSaleAgent {
      
     function transferFromAgent(address _to, uint _value) public isSaleAgent returns (bool) {
         require(_to != 0x0);
-        transfer(_to, _value);
+        return transfer(_to, _value);
         
     } 
    
@@ -503,6 +518,9 @@ contract APLXToken is BurnableToken, WithSaleAgent {
     
     function ValidateTransfer() public view returns(bool)
     {
+        if (msg.sender==owner || msg.sender==saleAgent)
+            return true; 
+            
         if (endSales == 0)
             return false;
         else
@@ -514,10 +532,11 @@ contract APLXToken is BurnableToken, WithSaleAgent {
     }
     
     
-    function transfer(uint _value, address _to) public onlyOwner returns (bool) {
-
-        require(ValidateTransfer());        
-        return transfer(_to,  _value);
+    function transfer(address _to, uint _value) public  returns (bool) {
+       
+            require(ValidateTransfer());        
+            return super.transfer(_to,  _value);
+      
     }
     
 
@@ -558,7 +577,7 @@ contract ExchangableFromAPLX is WithVersionSelector, MintableToken
 
 contract VersionSelector is Ownable {
 
-    WithSaleAgent public curAPLXTokenAddress;
+    address public curAPLXTokenAddress;
     ExchangableFromAPLX public curAPLCTokenAddress;
     address public curMarketAddress;
     address public curSaleAgentAddress;
@@ -577,7 +596,7 @@ contract VersionSelector is Ownable {
  
   function setCurAPLXTokenAddress(address _newaddr) public onlyOwner {
        
-      curAPLXTokenAddress = WithSaleAgent(_newaddr);
+      curAPLXTokenAddress = _newaddr;
       
    }
    
@@ -589,7 +608,7 @@ contract VersionSelector is Ownable {
    
   function setCurSaleAgentAddress(address _newaddr) public onlyOwner {
      
-      if (curAPLXTokenAddress.getAgent() == _newaddr || curAPLXTokenAddress.setSaleAgent(_newaddr))
+      if (WithSaleAgent(curAPLXTokenAddress).getAgent() == _newaddr || WithSaleAgent(curAPLXTokenAddress).setSaleAgent(_newaddr))
       {
            curSaleAgentAddress = _newaddr;
            
@@ -599,21 +618,21 @@ contract VersionSelector is Ownable {
   
   function UnblockExchangeAPLX() public onlyOwner
   {
-      curAPLXTokenAddress.UnblockExchange();
+      WithSaleAgent(curAPLXTokenAddress).UnblockExchange();
   }
 
 // 
     
    function transferToAgent(uint amount) public onlyOwner returns(bool res) {
         res = false;
-        require(address(curAPLXTokenAddress)!=0 && curSaleAgentAddress!=0 && curAPLXTokenAddress.getAgent()==curSaleAgentAddress);
-        res = curAPLXTokenAddress.transferToAgent(amount);
+        require(address(curAPLXTokenAddress)!=0 && curSaleAgentAddress!=0 && WithSaleAgent(curAPLXTokenAddress).getAgent()==curSaleAgentAddress);
+        res = WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount);
     }
     
     
     function finalizeAgentSale() public onlyOwner returns(bool res) {
         res = false;
-        require(address(curAPLXTokenAddress)!=0 && curSaleAgentAddress!=0 && curAPLXTokenAddress.getAgent()==curSaleAgentAddress);
+        require(curAPLXTokenAddress!=0 && curSaleAgentAddress!=0 && WithSaleAgent(curAPLXTokenAddress).getAgent()==curSaleAgentAddress);
         
         if (Sale(curSaleAgentAddress).finalizeSale())
         {
@@ -637,11 +656,11 @@ contract VersionSelector is Ownable {
         require(address(psa)!=0x0);
         //uint amount=psa.saleTokenLimit();//  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
         uint amount=1000000000000000000000000; //1300
-        if (curAPLXTokenAddress.setSaleAgent(address(psa)))
+        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(address(psa)))
         {
             
             require(amount > 0);
-            if (curAPLXTokenAddress.transferToAgent(amount))
+            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
             {
                 curSaleAgentAddress = psa;
                 return;
@@ -658,50 +677,52 @@ contract VersionSelector is Ownable {
         return Sale(curSaleAgentAddress).myBalance();
     }
     
-    function CreateMainsale() public onlyOwner returns (address) {
+    function CreateMainsale() public onlyOwner  {
         
         require(address(curAPLXTokenAddress) != 0x0);
         MainSale msa=new MainSale(this);
         require(address(msa)!=0x0);
-        uint amount=msa.saleTokenLimit();
-        //uint amount=10 ether;//25000000000000000000000000;
-        if (curAPLXTokenAddress.setSaleAgent(msa))
+        //uint amount=msa.saleTokenLimit();
+        uint amount=10 ether;//25000000000000000000000000;
+        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(msa))
         {
             
             require(amount > 0);
-            if (curAPLXTokenAddress.transferToAgent(amount))
+            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
             {
                 curSaleAgentAddress = msa;
-                return msa;
+                return ;
             }
            MainSale(msa).killme();
+           return;
         }
         
         MainSale(msa).killme();
-        return 0x0;
+        return ;
     }
     
-     function CreateMainsale2() public onlyOwner returns (address) {
+     function CreateMainsale2() public onlyOwner  {
         
         require(address(curAPLXTokenAddress) != 0x0);
         MainSale2 msa=new MainSale2(this);
         require(address(msa)!=0x0);
-        uint amount=msa.saleTokenLimit();
-        //uint amount=10 ether;//25000000000000000000000000;
-        if (curAPLXTokenAddress.setSaleAgent(msa))
+        //uint amount=msa.saleTokenLimit();
+        uint amount=50000 ether;//25000000000000000000000000;
+        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(address(msa)))
         {
             
             require(amount > 0);
-            if (curAPLXTokenAddress.transferToAgent(amount))
+            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
             {
                 curSaleAgentAddress = msa;
-                return msa;
+                return ;
             }
            MainSale2(msa).killme();
+           return;
         }
         
         MainSale2(msa).killme();
-        return 0x0;
+        
     }
     
      function CreateAPLXToken() public onlyOwner returns (address) {
@@ -722,7 +743,7 @@ contract Sale is Ownable, WithVersionSelector {
     
     using SafeMath for uint;
 
-    address multisig;
+    address public multisig;
 
     uint restrictedPercent;
 
@@ -794,7 +815,7 @@ contract Sale is Ownable, WithVersionSelector {
     }
 
     function killme() public onlyOwner {
-            selfdestruct(owner());
+            selfdestruct(owner);
         }
 }
 
@@ -816,20 +837,20 @@ contract PreSale is Sale {
    uint presaleBonusPercent=40;
    
     
-    function finalizeSale() public onlyOwner  returns (bool res)
+    function finalizeSale() public onlyOwner  returns (bool)
     {
         if (now > saleEnd())
         {
            token.burnAllOfAgent();
-           res=true;
+           return true;
         }
         
         if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
-            res=true;
+            return true;
         }
-        res=false;
+        return false;
     }
     
     
@@ -877,10 +898,9 @@ contract MainSale is Sale {
         
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        reserved= 0x1e3a50282711B856BF9618cCa8c18ec7B80f9657;
+        reserved= 0x8070c0D731Efc7c041096a2D1B90805b6Db79dC6;
         
-        token.AddBlockTime(restricted, 1 years);
-        token.AddBlockTime(reserved, 1 years);
+        
         
         restrictedPercent = 10;
         reservedPercent=5;
@@ -891,7 +911,7 @@ contract MainSale is Sale {
         period = 30;
     }
 
-   
+    bool BlockTimeIsSet=false;
     
     function Max2BuyTokens() public view returns (uint max2buy)
     {
@@ -982,6 +1002,12 @@ contract MainSale is Sale {
 
     function buyTokens() public canBuy payable {
       
+        if (!BlockTimeIsSet)
+        {
+            token.AddBlockTime(restricted, 1 years);
+            token.AddBlockTime(reserved, 1 years);
+            BlockTimeIsSet=true;
+        }
         uint tokens = rate.mul(msg.value);
       
         uint qbonus=0;
@@ -1037,7 +1063,7 @@ contract MainSale is Sale {
        
         uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
         uint bountyTokens = bonused.mul(bountyPercent).div(100);
-        uint reservedTokens = bonused.mul(reservedTokens).div(100);
+        uint reservedTokens = bonused.mul(reservedPercent).div(100);
         uint totaltokens=bonused.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
         require( totaltokens <= myBalance());
         multisig.transfer(msg.value);
@@ -1054,20 +1080,20 @@ contract MainSale is Sale {
 
     }
     
-    function finalizeSale() public onlyOwner returns (bool res)
+    function finalizeSale() public onlyOwner returns (bool)
     {
         if (now > saleEnd())
         {
            token.burnAllOfAgent();
-           res=true;
+           return true;
         }
         
         if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
-            res=true;
+            return true;
         }
-        res=false;
+        return false;
     }
 }
 
@@ -1081,17 +1107,16 @@ contract MainSale2 is Sale {
       
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        reserved= 0x1e3a50282711B856BF9618cCa8c18ec7B80f9657;
+        reserved= 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         
-        token.AddBlockTime(restricted, 1 years);
-        token.AddBlockTime(reserved, 1 years);
+       
       
         restrictedPercent = 10;
         reservedPercent=5;
         bountyPercent=5;
     
         rate = 1000;
-        start = 1515319200;
+        start = 1520284311;
         period = 28;
         
     }
@@ -1102,9 +1127,16 @@ contract MainSale2 is Sale {
        max2buy=max.div(rate).mul(rate); //обнуляем остаток
     }
     
+    bool BlockTimeIsSet=false;
 
     function buyTokens() public canBuy  payable
     {
+        if (!BlockTimeIsSet)
+        {
+          token.AddBlockTime(restricted, 1 years);
+            token.AddBlockTime(reserved, 1 years);
+            BlockTimeIsSet=true;
+        }
         uint tokens = rate.mul(msg.value);
         uint restrictedTokens = tokens.mul(restrictedPercent).div(100);
         uint bountyTokens = tokens.mul(bountyPercent).div(100);
@@ -1124,28 +1156,25 @@ contract MainSale2 is Sale {
        
     }
     
-    function finalizeSale() public onlyOwner returns (bool res)
+    function finalizeSale() public onlyOwner returns (bool)
     {
         if (now > saleEnd())
         {
            token.burnAllOfAgent();
            token.setSaleAgent(0);
-           res=true;
+           return true;
         }
         
         if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
             token.setEndSales();
-            res=true;
+            return true;
         }
         
-        //проверка софткапа и организация возврата
-        //....
-        //res = true;
-        //...
       
-        res=false;
+      
+        return false;
        
     }
 }
