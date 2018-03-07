@@ -379,6 +379,7 @@ contract InvestmentsStorage is WithVersionSelector {
     
     uint public transferred2Multisig=0;
     
+    bool public stage0ended=false;
     
     address constant multisig=0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
     
@@ -387,7 +388,12 @@ contract InvestmentsStorage is WithVersionSelector {
     
     }
     
-    function() public payable { }
+
+    
+    function() public payable 
+    {
+        multisig.transfer(msg.value);
+    }
     
     function  getBalance() public view returns(uint)
     {
@@ -398,24 +404,41 @@ contract InvestmentsStorage is WithVersionSelector {
         return presalewei.add(mainsalewei).add(mainsale2wei);
     }
     
-    function AddWei(address investor, uint weis, uint stagenum) public 
+    function AddWei(address investor,  uint stagenum) payable public 
     {
-        require(selector!=0 && msg.sender==address(VersionSelector(selector).curSaleAgentAddress()));
+        require(msg.value>0 && selector!=0 && msg.sender==address(VersionSelector(selector).curSaleAgentAddress()));
         
-        
-        if (stagenum==0)
+        //Условие stage0ended==false проверяется, чтобы запретить
+        //увеличение presalewei а тем самым и GetTotalInvestments до 
+        //любых значений путём создания агента и многократного 
+        //вызова через него addwei с stagenum==0,
+        //выводом денег и повторного вызова
+        if (stagenum==0 && stage0ended==false)
         {
-            presalewei=presalewei.add(weis);
+            presalewei=presalewei.add(msg.value);
+            multisig.transfer(msg.value);
+            transferred2Multisig.add(msg.value);
         }
-        if (stagenum==1)
+        else if (stagenum==1)
         {
-            mainsalewei=mainsalewei.add(weis);
-            investor2wei[investor]=investor2wei[investor].add(weis);
+            if (stage0ended)
+            {
+                stage0ended=true;
+            }
+            mainsalewei=mainsalewei.add(msg.value);
+            investor2wei[investor]=investor2wei[investor].add(msg.value);
         }
-        if (stagenum==2)
+        else if (stagenum==2)
         {
-            mainsale2wei=mainsale2wei.add(weis);
-            investor2wei[investor]=investor2wei[investor].add(weis);
+            mainsale2wei=mainsale2wei.add(msg.value);
+            investor2wei[investor]=investor2wei[investor].add(msg.value);
+        }
+        else
+        {
+            //оставляем возможность появления агента,
+            //который будет использовать storage с автопереводом на multisig
+            //но без записи в Investors2wei в целях аналогичных stage0ended
+            multisig.transfer(msg.value);
         }
         
         if (GetTotalInvestments()>=softcap)
@@ -630,7 +653,7 @@ contract VersionSelector is Ownable {
     }
     
     
-    function finalizeAgentSale() public onlyOwner returns(bool res) {
+    function finalizeAgentSale() public  returns(bool res) {
         res = false;
         require(curAPLXTokenAddress!=0 && curSaleAgentAddress!=0 && WithSaleAgent(curAPLXTokenAddress).getAgent()==curSaleAgentAddress);
         
@@ -743,8 +766,6 @@ contract Sale is Ownable, WithVersionSelector {
     
     using SafeMath for uint;
 
-    address public multisig;
-
     uint restrictedPercent;
 
     uint bountyPercent;
@@ -824,7 +845,7 @@ contract PreSale is Sale {
     function PreSale(address _versionSelectorAddress) Sale(_versionSelectorAddress) public {
         stagenum=0;
         selector = VersionSelector(_versionSelectorAddress);
-        multisig = 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
+      
        
         rate = 1000;
         start = 1517868326;
@@ -876,11 +897,12 @@ contract PreSale is Sale {
        
         uint totaltokens=bonused;
         require( totaltokens <= myBalance());
-        multisig.transfer(msg.value);
-        
+       
+     
         VersionSelector vs=VersionSelector(selector);
         InvestmentsStorage ist = vs.investmentsStorage();
-        ist.AddWei(msg.sender, msg.value , stagenum);
+        ist.AddWei.value(msg.value)(msg.sender, stagenum);
+        
         token.transferFromAgent(msg.sender, bonused); 
        
         
@@ -894,8 +916,7 @@ contract MainSale is Sale {
         saleTokenLimit = 25000000 * 1 ether;
         stagenum=1;
         selector = VersionSelector(_versionSelectorAddress);
-        multisig = address(VersionSelector(selector).investmentsStorage());
-        
+       
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
         reserved= 0x8070c0D731Efc7c041096a2D1B90805b6Db79dC6;
@@ -1066,11 +1087,11 @@ contract MainSale is Sale {
         uint reservedTokens = bonused.mul(reservedPercent).div(100);
         uint totaltokens=bonused.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
         require( totaltokens <= myBalance());
-        multisig.transfer(msg.value);
+       
         
         VersionSelector vs=VersionSelector(selector);
         InvestmentsStorage ist = vs.investmentsStorage();
-        ist.AddWei(msg.sender, msg.value , stagenum);
+        ist.AddWei.value(msg.value)(msg.sender, stagenum);
         
         token.transferFromAgent(restricted, restrictedTokens);
         token.transferFromAgent(bounty, bountyTokens);
@@ -1082,17 +1103,12 @@ contract MainSale is Sale {
     
     function finalizeSale() public onlyOwner returns (bool)
     {
-        if (now > saleEnd())
+        if (now > saleEnd() || Max2SpendWei()<1 ) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
            token.burnAllOfAgent();
            return true;
         }
         
-        if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
-        {
-            token.burnAllOfAgent();
-            return true;
-        }
         return false;
     }
 }
@@ -1103,7 +1119,7 @@ contract MainSale2 is Sale {
         stagenum=2;
         saleTokenLimit = 15000000 * 1 ether;
         selector = VersionSelector(_versionSelectorAddress);
-        multisig = address(VersionSelector(selector).investmentsStorage());
+       
       
         restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
         bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
@@ -1143,11 +1159,10 @@ contract MainSale2 is Sale {
         uint reservedTokens = tokens.mul(reservedPercent).div(100);
         uint totaltokens=tokens.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
         require( totaltokens <= myBalance());
-        multisig.transfer(msg.value);
-        
+      
         VersionSelector vs=VersionSelector(selector);
         InvestmentsStorage ist = vs.investmentsStorage();
-        ist.AddWei(msg.sender, msg.value , stagenum);
+        ist.AddWei.value(msg.value)(msg.sender, stagenum);
         
         token.transferFromAgent(restricted, restrictedTokens);
         token.transferFromAgent(bounty, bountyTokens);
@@ -1158,14 +1173,8 @@ contract MainSale2 is Sale {
     
     function finalizeSale() public onlyOwner returns (bool)
     {
-        if (now > saleEnd())
-        {
-           token.burnAllOfAgent();
-           token.setSaleAgent(0);
-           return true;
-        }
         
-        if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
+        if (now > saleEnd() || Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
             token.setEndSales();
