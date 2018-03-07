@@ -1018,7 +1018,7 @@ contract MainSale is Sale {
     }
    
     
-   
+    //делал для проверки соответсвия расчёта бонусов и максимальной покупки (потом можно убрать)
     function needAgetBalanceForSpendWei(uint tospend) public view  returns(uint totaltokens)
     {
         uint tokens = rate.mul(tospend);
