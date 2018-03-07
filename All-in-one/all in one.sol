@@ -421,7 +421,7 @@ contract InvestmentsStorage is WithVersionSelector {
         }
         else if (stagenum==1)
         {
-            if (stage0ended)
+            if (!stage0ended)
             {
                 stage0ended=true;
             }
@@ -1019,7 +1019,67 @@ contract MainSale is Sale {
    
     
    
- 
+    function needAgetBalanceForSpendWei(uint tospend) public view  returns(uint totaltokens)
+    {
+        uint tokens = rate.mul(tospend);
+      
+        uint qbonus=0;
+        
+        if (tospend >= 1 ether)
+        {
+            qbonus = tokens.div(20); //если потратили более 1 эфир, то + 5%
+        }
+        
+        if (tospend >= 10 ether)
+        {
+            qbonus = tokens.div(10);//если потратили более 10 эфир, то + 10%
+        }
+        
+        if (tospend >= 100 ether)
+        {
+            qbonus =  tokens.mul(15).div(100); //если потратили более 100 эфир, то + 15%
+        }
+        
+        if (tospend >= 1000 ether)
+        {
+            qbonus = tokens.div(5); //если потратили более 1000 эфир, то + 20%
+        }
+        
+        uint tbonus=0; 
+        
+        if (now.sub(start) < 3 weeks)
+        {
+            tbonus=tokens.div(20); //если 3 неделя, то 5%
+        }
+        
+        
+        if (now.sub(start) < 2 weeks)
+        {
+            tbonus=tokens.div(10); //если 2 неделя, то 10%
+        }
+        
+        
+        if (now.sub(start) < 1 weeks)
+        {
+            tbonus=tokens.mul(15).div(100); //если 1 неделя, то 15%
+        }
+        
+        
+        if (now.sub(start) < 1 days)
+        {
+            tbonus=tokens.div(5); //если 1 день, то 20%
+        }
+        
+        
+        uint bonused = tokens.add(qbonus).add(tbonus);
+        
+       
+        uint restrictedTokens = bonused.mul(restrictedPercent).div(100);
+        uint bountyTokens = bonused.mul(bountyPercent).div(100);
+        uint reservedTokens = bonused.mul(reservedPercent).div(100);
+        totaltokens=bonused.add(restrictedTokens).add(bountyTokens).add(reservedTokens);
+    
+    }
 
     function buyTokens() public canBuy payable {
       
@@ -1095,7 +1155,7 @@ contract MainSale is Sale {
         
         token.transferFromAgent(restricted, restrictedTokens);
         token.transferFromAgent(bounty, bountyTokens);
-        token.transferFromAgent(reserved,restrictedTokens);
+        token.transferFromAgent(reserved, reservedTokens);
         token.transferFromAgent(msg.sender, bonused); 
         
 
