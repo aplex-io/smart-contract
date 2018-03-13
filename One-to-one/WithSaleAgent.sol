@@ -1,99 +1,99 @@
-pragma solidity ^0.4.20;
+п»їpragma solidity ^0.4.20;
 
 import 'browser/WithVersionSelector.sol';
 import 'browser/Ownable.sol';
 
 
 /**
-* Контракт обеспечивающий продажу токенов от имени агента продажи
-* (виртуальный)
+* РљРѕРЅС‚СЂР°РєС‚ РѕР±РµСЃРїРµС‡РёРІР°СЋС‰РёР№ РїСЂРѕРґР°Р¶Сѓ С‚РѕРєРµРЅРѕРІ РѕС‚ РёРјРµРЅРё Р°РіРµРЅС‚Р° РїСЂРѕРґР°Р¶Рё
+* (РІРёСЂС‚СѓР°Р»СЊРЅС‹Р№)
 */
 contract WithSaleAgent is Ownable, WithVersionSelector {
     
-     //адрес агента продажи
+     //Р°РґСЂРµСЃ Р°РіРµРЅС‚Р° РїСЂРѕРґР°Р¶Рё
      address internal saleAgent;
      
-     //словарь блокировок операций продажи с токенами после ICO
-     //ключ -адрес, значение - время в unix формате, на которое 
-     //устанавливается блокировка для адреса (отсчёт от окончания ICO -  endsales)
+     //СЃР»РѕРІР°СЂСЊ Р±Р»РѕРєРёСЂРѕРІРѕРє РѕРїРµСЂР°С†РёР№ РїСЂРѕРґР°Р¶Рё СЃ С‚РѕРєРµРЅР°РјРё РїРѕСЃР»Рµ ICO
+     //РєР»СЋС‡ -Р°РґСЂРµСЃ, Р·РЅР°С‡РµРЅРёРµ - РІСЂРµРјСЏ РІ unix С„РѕСЂРјР°С‚Рµ, РЅР° РєРѕС‚РѕСЂРѕРµ 
+     //СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ Р±Р»РѕРєРёСЂРѕРІРєР° РґР»СЏ Р°РґСЂРµСЃР° (РѕС‚СЃС‡С‘С‚ РѕС‚ РѕРєРѕРЅС‡Р°РЅРёСЏ ICO -  endsales)
      mapping(address => uint256) blocked;
      
-     //UNIX время, когда закончилось ICO (выставляется агентом при финализации)
+     //UNIX РІСЂРµРјСЏ, РєРѕРіРґР° Р·Р°РєРѕРЅС‡РёР»РѕСЃСЊ ICO (РІС‹СЃС‚Р°РІР»СЏРµС‚СЃСЏ Р°РіРµРЅС‚РѕРј РїСЂРё С„РёРЅР°Р»РёР·Р°С†РёРё)
      uint public endSales=0;
      bool blockExchange=true;
      
-     //Конструктор
+     //РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ
      function WithSaleAgent(address _selector) WithVersionSelector(_selector) public {
      
      }
     
-    //Установка времени блокировки продаж после ICO для адреса blocking на время time (UNIX формат)
+    //РЈСЃС‚Р°РЅРѕРІРєР° РІСЂРµРјРµРЅРё Р±Р»РѕРєРёСЂРѕРІРєРё РїСЂРѕРґР°Р¶ РїРѕСЃР»Рµ ICO РґР»СЏ Р°РґСЂРµСЃР° blocking РЅР° РІСЂРµРјСЏ time (UNIX С„РѕСЂРјР°С‚)
     function AddBlockTime(address blocking, uint time) public isSaleAgent
     {
         blocked[blocking]=time;
     }
     
-    //Установка времени окончания ICO агентом при финализации 
+    //РЈСЃС‚Р°РЅРѕРІРєР° РІСЂРµРјРµРЅРё РѕРєРѕРЅС‡Р°РЅРёСЏ ICO Р°РіРµРЅС‚РѕРј РїСЂРё С„РёРЅР°Р»РёР·Р°С†РёРё 
     function setEndSales() public isSaleAgent 
     {
         endSales=now;
     } 
     
-    //Разблокровка обмена (APLX на APLC)
+    //Р Р°Р·Р±Р»РѕРєСЂРѕРІРєР° РѕР±РјРµРЅР° (APLX РЅР° APLC)
     function UnblockExchange() public onlyOwner
     {
         blockExchange = false;
     }
     
-    //Модификатор - выполнение только агентом или владельцем
+    //РњРѕРґРёС„РёРєР°С‚РѕСЂ - РІС‹РїРѕР»РЅРµРЅРёРµ С‚РѕР»СЊРєРѕ Р°РіРµРЅС‚РѕРј РёР»Рё РІР»Р°РґРµР»СЊС†РµРј
     modifier isSaleAgentOrOwner 
     {
-         if (msg.sender == owner) //владелец
+         if (msg.sender == owner) //РІР»Р°РґРµР»РµС†
          {
             _;
          }
          else
          {
-             require(address(selector)!=0x0 ); //VersionSelector непустой
-             require(saleAgent != 0x0 ); //агент не пустой
-             require(selector.curSaleAgentAddress() == msg.sender ); //проверяем установлен ли saleAgent в VersionSelector 
-             require(msg.sender == saleAgent); //агент
+             require(address(selector)!=0x0 ); //VersionSelector РЅРµРїСѓСЃС‚РѕР№
+             require(saleAgent != 0x0 ); //Р°РіРµРЅС‚ РЅРµ РїСѓСЃС‚РѕР№
+             require(selector.curSaleAgentAddress() == msg.sender ); //РїСЂРѕРІРµСЂСЏРµРј СѓСЃС‚Р°РЅРѕРІР»РµРЅ Р»Рё saleAgent РІ VersionSelector 
+             require(msg.sender == saleAgent); //Р°РіРµРЅС‚
              _;
          }
      }
      
        modifier isSaleAgent 
        {
-             require(address(selector)!=0x0 ); //VersionSelector непустой
-             require(saleAgent != 0x0 ); //агент не пустой
-             require(selector.curSaleAgentAddress() == msg.sender ); //проверяем установлен ли saleAgent в VersionSelector 
-             require(msg.sender == saleAgent); //агент
+             require(address(selector)!=0x0 ); //VersionSelector РЅРµРїСѓСЃС‚РѕР№
+             require(saleAgent != 0x0 ); //Р°РіРµРЅС‚ РЅРµ РїСѓСЃС‚РѕР№
+             require(selector.curSaleAgentAddress() == msg.sender ); //РїСЂРѕРІРµСЂСЏРµРј СѓСЃС‚Р°РЅРѕРІР»РµРЅ Р»Рё saleAgent РІ VersionSelector 
+             require(msg.sender == saleAgent); //Р°РіРµРЅС‚
              _;
         }
      
      
-     //установка текущего агента (только владелец)
+     //СѓСЃС‚Р°РЅРѕРІРєР° С‚РµРєСѓС‰РµРіРѕ Р°РіРµРЅС‚Р° (С‚РѕР»СЊРєРѕ РІР»Р°РґРµР»РµС†)
     function setSaleAgent(address newAgent) public onlyOwner returns(bool res) 
     {
          saleAgent = newAgent;
          res = saleAgent == newAgent;
     }
      
-    //получение адреса текущего агента 
+    //РїРѕР»СѓС‡РµРЅРёРµ Р°РґСЂРµСЃР° С‚РµРєСѓС‰РµРіРѕ Р°РіРµРЅС‚Р° 
     function getAgent() public view returns (address agent)
     {
         return saleAgent;
     }
     
-    //получение текущего баланса агента
+    //РїРѕР»СѓС‡РµРЅРёРµ С‚РµРєСѓС‰РµРіРѕ Р±Р°Р»Р°РЅСЃР° Р°РіРµРЅС‚Р°
     function getAgentBalance() public view returns (uint agentbalance);
         
-    //перевод токенов со счета агента (только агент)
+    //РїРµСЂРµРІРѕРґ С‚РѕРєРµРЅРѕРІ СЃРѕ СЃС‡РµС‚Р° Р°РіРµРЅС‚Р° (С‚РѕР»СЊРєРѕ Р°РіРµРЅС‚)
     function transferFromAgent(address _to, uint _value) public returns (bool);
     
-    //перевод токенов на счёт агента (только владелец)
+    //РїРµСЂРµРІРѕРґ С‚РѕРєРµРЅРѕРІ РЅР° СЃС‡С‘С‚ Р°РіРµРЅС‚Р° (С‚РѕР»СЊРєРѕ РІР»Р°РґРµР»РµС†)
     function transferToAgent(uint _value) public returns(bool res);
     
-    //сжигание всех токенов агента (только агент)
+    //СЃР¶РёРіР°РЅРёРµ РІСЃРµС… С‚РѕРєРµРЅРѕРІ Р°РіРµРЅС‚Р° (С‚РѕР»СЊРєРѕ Р°РіРµРЅС‚)
     function burnAllOfAgent() public;
 }

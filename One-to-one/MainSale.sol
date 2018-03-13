@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+п»їpragma solidity ^0.4.20;
 
 import 'browser/Ownable.sol';
 import 'browser/InvestmentsStorage.sol';
@@ -37,25 +37,25 @@ contract MainSale is Sale {
         
         if (now.sub(start) < 3 weeks)
         {
-            tpercent=5; //если 3 неделя, то 5%
+            tpercent=5; //РµСЃР»Рё 3 РЅРµРґРµР»СЏ, С‚Рѕ 5%
         }
         
         
         if (now.sub(start) < 2 weeks)
         {
-            tpercent=10; //если 2 неделя, то 10%
+            tpercent=10; //РµСЃР»Рё 2 РЅРµРґРµР»СЏ, С‚Рѕ 10%
         }
         
         
         if (now.sub(start) < 1 weeks)
         {
-            tpercent=15; //если 1 неделя, то 15%
+            tpercent=15; //РµСЃР»Рё 1 РЅРµРґРµР»СЏ, С‚Рѕ 15%
         }
         
         
         if (now.sub(start) < 1 days)
         {
-            tpercent=20; //если 1 день, то 20%
+            tpercent=20; //РµСЃР»Рё 1 РґРµРЅСЊ, С‚Рѕ 20%
         }
         
         uint percent=restrictedPercent.add(bountyPercent).add(reservedPercent);
@@ -112,7 +112,7 @@ contract MainSale is Sale {
     }
    
     
-    //делал для проверки соответсвия расчёта бонусов и максимальной покупки (потом можно убрать)
+    //РґРµР»Р°Р» РґР»СЏ РїСЂРѕРІРµСЂРєРё СЃРѕРѕС‚РІРµС‚СЃРІРёСЏ СЂР°СЃС‡С‘С‚Р° Р±РѕРЅСѓСЃРѕРІ Рё РјР°РєСЃРёРјР°Р»СЊРЅРѕР№ РїРѕРєСѓРїРєРё (РїРѕС‚РѕРј РјРѕР¶РЅРѕ СѓР±СЂР°С‚СЊ)
     function needAgetBalanceForSpendWei(uint tospend) public view  returns(uint totaltokens)
     {
         uint tokens = rate.mul(tospend);
@@ -121,47 +121,47 @@ contract MainSale is Sale {
         
         if (tospend >= 1 ether)
         {
-            qbonus = tokens.div(20); //если потратили более 1 эфир, то + 5%
+            qbonus = tokens.div(20); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 1 СЌС„РёСЂ, С‚Рѕ + 5%
         }
         
         if (tospend >= 10 ether)
         {
-            qbonus = tokens.div(10);//если потратили более 10 эфир, то + 10%
+            qbonus = tokens.div(10);//РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 10 СЌС„РёСЂ, С‚Рѕ + 10%
         }
         
         if (tospend >= 100 ether)
         {
-            qbonus =  tokens.mul(15).div(100); //если потратили более 100 эфир, то + 15%
+            qbonus =  tokens.mul(15).div(100); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 100 СЌС„РёСЂ, С‚Рѕ + 15%
         }
         
         if (tospend >= 1000 ether)
         {
-            qbonus = tokens.div(5); //если потратили более 1000 эфир, то + 20%
+            qbonus = tokens.div(5); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 1000 СЌС„РёСЂ, С‚Рѕ + 20%
         }
         
         uint tbonus=0; 
         
         if (now.sub(start) < 3 weeks)
         {
-            tbonus=tokens.div(20); //если 3 неделя, то 5%
+            tbonus=tokens.div(20); //РµСЃР»Рё 3 РЅРµРґРµР»СЏ, С‚Рѕ 5%
         }
         
         
         if (now.sub(start) < 2 weeks)
         {
-            tbonus=tokens.div(10); //если 2 неделя, то 10%
+            tbonus=tokens.div(10); //РµСЃР»Рё 2 РЅРµРґРµР»СЏ, С‚Рѕ 10%
         }
         
         
         if (now.sub(start) < 1 weeks)
         {
-            tbonus=tokens.mul(15).div(100); //если 1 неделя, то 15%
+            tbonus=tokens.mul(15).div(100); //РµСЃР»Рё 1 РЅРµРґРµР»СЏ, С‚Рѕ 15%
         }
         
         
         if (now.sub(start) < 1 days)
         {
-            tbonus=tokens.div(5); //если 1 день, то 20%
+            tbonus=tokens.div(5); //РµСЃР»Рё 1 РґРµРЅСЊ, С‚Рѕ 20%
         }
         
         
@@ -189,47 +189,47 @@ contract MainSale is Sale {
         
         if (msg.value >= 1 ether)
         {
-            qbonus = tokens.div(20); //если потратили более 1 эфир, то + 5%
+            qbonus = tokens.div(20); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 1 СЌС„РёСЂ, С‚Рѕ + 5%
         }
         
         if (msg.value >= 10 ether)
         {
-            qbonus = tokens.div(10);//если потратили более 10 эфир, то + 10%
+            qbonus = tokens.div(10);//РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 10 СЌС„РёСЂ, С‚Рѕ + 10%
         }
         
         if (msg.value >= 100 ether)
         {
-            qbonus =  tokens.mul(15).div(100); //если потратили более 100 эфир, то + 15%
+            qbonus =  tokens.mul(15).div(100); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 100 СЌС„РёСЂ, С‚Рѕ + 15%
         }
         
         if (msg.value >= 1000 ether)
         {
-            qbonus = tokens.div(5); //если потратили более 1000 эфир, то + 20%
+            qbonus = tokens.div(5); //РµСЃР»Рё РїРѕС‚СЂР°С‚РёР»Рё Р±РѕР»РµРµ 1000 СЌС„РёСЂ, С‚Рѕ + 20%
         }
         
         uint tbonus=0; 
         
         if (now.sub(start) < 3 weeks)
         {
-            tbonus=tokens.div(20); //если 3 неделя, то 5%
+            tbonus=tokens.div(20); //РµСЃР»Рё 3 РЅРµРґРµР»СЏ, С‚Рѕ 5%
         }
         
         
         if (now.sub(start) < 2 weeks)
         {
-            tbonus=tokens.div(10); //если 2 неделя, то 10%
+            tbonus=tokens.div(10); //РµСЃР»Рё 2 РЅРµРґРµР»СЏ, С‚Рѕ 10%
         }
         
         
         if (now.sub(start) < 1 weeks)
         {
-            tbonus=tokens.mul(15).div(100); //если 1 неделя, то 15%
+            tbonus=tokens.mul(15).div(100); //РµСЃР»Рё 1 РЅРµРґРµР»СЏ, С‚Рѕ 15%
         }
         
         
         if (now.sub(start) < 1 days)
         {
-            tbonus=tokens.div(5); //если 1 день, то 20%
+            tbonus=tokens.div(5); //РµСЃР»Рё 1 РґРµРЅСЊ, С‚Рѕ 20%
         }
         
         
@@ -257,7 +257,7 @@ contract MainSale is Sale {
     
     function finalizeSale() public onlyOwner returns (bool)
     {
-        if (now > saleEnd() || Max2SpendWei()<1 ) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
+        if (now > saleEnd() || Max2SpendWei()<1 ) //РјРµРЅСЊС€Рµ rate Р·Р° 1 wei РЅРµ РєСѓРїРёС€СЊ, С‚Р°РєРёРµ Р·РЅР°С‡РµРЅРёСЏ РјРѕРіСѓС‚ РѕСЃС‚Р°РІР°С‚СЊСЃСЏ РїРѕСЃР»Рµ СЂР°СЃС‡РµС‚Р° РїСЂРѕС†РµРЅС‚РѕРІ, РїРѕСЌС‚РѕРјСѓ РёС… РїСЂРѕСЃС‚Рѕ СЃР¶РёРіР°РµРј  (РЅР°РїРѕРјРёРЅР°СЋ 1 С‚РѕРєРµРЅ РЅР° СЃС‡РµС‚Сѓ - СЌС‚Рѕ balances[address]==1*10^18)
         {
            token.burnAllOfAgent();
            return true;

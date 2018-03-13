@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+ï»¿pragma solidity ^0.4.20;
 
 import 'browser/Ownable.sol';
 import 'browser/InvestmentsStorage.sol';
@@ -29,8 +29,8 @@ contract MainSale2 is Sale {
 
     function Max2BuyTokens() public view returns (uint max2buy)
     {
-       uint max = myBalance().mul(100).div(restrictedPercent.add(bountyPercent).add(reservedPercent).add(100)); //ïðîâåðèòü!!
-       max2buy=max.div(rate).mul(rate); //îáíóëÿåì îñòàòîê
+       uint max = myBalance().mul(100).div(restrictedPercent.add(bountyPercent).add(reservedPercent).add(100)); //Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ!!
+       max2buy=max.div(rate).mul(rate); //Ð¾Ð±Ð½ÑƒÐ»ÑÐµÐ¼ Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ðº
     }
     
     bool BlockTimeIsSet=false;
@@ -64,7 +64,7 @@ contract MainSale2 is Sale {
     function finalizeSale() public onlyOwner returns (bool)
     {
         
-        if (now > saleEnd() || Max2SpendWei()<1) //ìåíüøå rate çà 1 wei íå êóïèøü, òàêèå çíà÷åíèÿ ìîãóò îñòàâàòüñÿ ïîñëå ðàñ÷åòà ïðîöåíòîâ, ïîýòîìó èõ ïðîñòî ñæèãàåì  (íàïîìèíàþ 1 òîêåí íà ñ÷åòó - ýòî balances[address]==1*10^18)
+        if (now > saleEnd() || Max2SpendWei()<1) //Ð¼ÐµÐ½ÑŒÑˆÐµ rate Ð·Ð° 1 wei Ð½Ðµ ÐºÑƒÐ¿Ð¸ÑˆÑŒ, Ñ‚Ð°ÐºÐ¸Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ñ Ð¼Ð¾Ð³ÑƒÑ‚ Ð¾ÑÑ‚Ð°Ð²Ð°Ñ‚ÑŒÑÑ Ð¿Ð¾ÑÐ»Ðµ Ñ€Ð°ÑÑ‡ÐµÑ‚Ð° Ð¿Ñ€Ð¾Ñ†ÐµÐ½Ñ‚Ð¾Ð², Ð¿Ð¾ÑÑ‚Ð¾Ð¼Ñƒ Ð¸Ñ… Ð¿Ñ€Ð¾ÑÑ‚Ð¾ ÑÐ¶Ð¸Ð³Ð°ÐµÐ¼  (Ð½Ð°Ð¿Ð¾Ð¼Ð¸Ð½Ð°ÑŽ 1 Ñ‚Ð¾ÐºÐµÐ½ Ð½Ð° ÑÑ‡ÐµÑ‚Ñƒ - ÑÑ‚Ð¾ balances[address]==1*10^18)
         {
             token.burnAllOfAgent();
             token.setEndSales();

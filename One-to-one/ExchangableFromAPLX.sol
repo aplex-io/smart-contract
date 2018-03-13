@@ -1,36 +1,36 @@
-pragma solidity ^0.4.20;
+ï»¿pragma solidity ^0.4.20;
 
 import 'browser/WithVersionSelector.sol';
 import 'browser/MintableToken.sol';
 
 /**
-* Êîíòğàêò îáåñïå÷èâàşùèé âûïóñê òîêåíîâ ïğè îáìåíå APLX íà APLC
-* íà ñ÷¸ò ìåíÿşùåãî 
+* ĞšĞ¾Ğ½Ñ‚Ñ€Ğ°ĞºÑ‚ Ğ¾Ğ±ĞµÑĞ¿ĞµÑ‡Ğ¸Ğ²Ğ°ÑÑ‰Ğ¸Ğ¹ Ğ²Ñ‹Ğ¿ÑƒÑĞº Ñ‚Ğ¾ĞºĞµĞ½Ğ¾Ğ² Ğ¿Ñ€Ğ¸ Ğ¾Ğ±Ğ¼ĞµĞ½Ğµ APLX Ğ½Ğ° APLC
+* Ğ½Ğ° ÑÑ‡Ñ‘Ñ‚ Ğ¼ĞµĞ½ÑÑÑ‰ĞµĞ³Ğ¾ 
 */
 contract ExchangableFromAPLX is MintableToken, WithVersionSelector
 {
     using SafeMath for uint;
     
-    //Êîíñòğóêòîğ
+    //ĞšĞ¾Ğ½ÑÑ‚Ñ€ÑƒĞºÑ‚Ğ¾Ñ€
     function ExchangableFromAPLX(address _versionSelectorAddress) public WithVersionSelector(_versionSelectorAddress)
     {
         
     }
     
-    //âûïóñê òîêåíîâ ïğè îáìåíå APLX íà APLC íà ñ÷¸ò ìåíÿşùåãî (holder) 
-    //â êîëè÷åñòâå â amount
-    //ôóíêöèÿ âûçûâàåòñÿ òîêåíîì APLX
+    //Ğ²Ñ‹Ğ¿ÑƒÑĞº Ñ‚Ğ¾ĞºĞµĞ½Ğ¾Ğ² Ğ¿Ñ€Ğ¸ Ğ¾Ğ±Ğ¼ĞµĞ½Ğµ APLX Ğ½Ğ° APLC Ğ½Ğ° ÑÑ‡Ñ‘Ñ‚ Ğ¼ĞµĞ½ÑÑÑ‰ĞµĞ³Ğ¾ (holder) 
+    //Ğ² ĞºĞ¾Ğ»Ğ¸Ñ‡ĞµÑÑ‚Ğ²Ğµ Ğ² amount
+    //Ñ„ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ²Ñ‹Ğ·Ñ‹Ğ²Ğ°ĞµÑ‚ÑÑ Ñ‚Ğ¾ĞºĞµĞ½Ğ¾Ğ¼ APLX
     function MintForExchange(address holder, uint amount)  public
     {
-        //ïğîâåğêà, ÷òî ôóíêöèÿ âûçûâàåòñÿ òîêåíîì APLX
+        //Ğ¿Ñ€Ğ¾Ğ²ĞµÑ€ĞºĞ°, Ñ‡Ñ‚Ğ¾ Ñ„ÑƒĞ½ĞºÑ†Ğ¸Ñ Ğ²Ñ‹Ğ·Ñ‹Ğ²Ğ°ĞµÑ‚ÑÑ Ñ‚Ğ¾ĞºĞµĞ½Ğ¾Ğ¼ APLX
         require(address(selector)!=0x0 && selector.curAPLXTokenAddress()==msg.sender);
-        //êîğğåêòèğîâêà îáùåãî êîëè÷åñòâà âûïóùåííûõ òîêåíîâ
+        //ĞºĞ¾Ñ€Ñ€ĞµĞºÑ‚Ğ¸Ñ€Ğ¾Ğ²ĞºĞ° Ğ¾Ğ±Ñ‰ĞµĞ³Ğ¾ ĞºĞ¾Ğ»Ğ¸Ñ‡ĞµÑÑ‚Ğ²Ğ° Ğ²Ñ‹Ğ¿ÑƒÑ‰ĞµĞ½Ğ½Ñ‹Ñ… Ñ‚Ğ¾ĞºĞµĞ½Ğ¾Ğ²
         totalSupply = totalSupply.add(amount);
-        //Âûïóñê íà ñ÷¸ò holder-à
+        //Ğ’Ñ‹Ğ¿ÑƒÑĞº Ğ½Ğ° ÑÑ‡Ñ‘Ñ‚ holder-Ğ°
         balances[holder] = balances[holder].add(amount);
-        //Ñîáûòèå Mint
+        //Ğ¡Ğ¾Ğ±Ñ‹Ñ‚Ğ¸Ğµ Mint
         Mint(holder, amount);
-        //Ñîáûòèå Transfer (0->holder)
+        //Ğ¡Ğ¾Ğ±Ñ‹Ñ‚Ğ¸Ğµ Transfer (0->holder)
         Transfer(address(0), holder, amount);
     }
 }

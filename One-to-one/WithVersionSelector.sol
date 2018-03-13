@@ -1,19 +1,19 @@
-pragma solidity ^0.4.20;
+п»їpragma solidity ^0.4.20;
 
 import 'browser/IVersionSelector.sol';
 
 
 /**
-* Контракт предназначен для хранения адреса контракта,
-* который имеет ссылки на все контракты системы - VersionSelector
+* РљРѕРЅС‚СЂР°РєС‚ РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ Р°РґСЂРµСЃР° РєРѕРЅС‚СЂР°РєС‚Р°,
+* РєРѕС‚РѕСЂС‹Р№ РёРјРµРµС‚ СЃСЃС‹Р»РєРё РЅР° РІСЃРµ РєРѕРЅС‚СЂР°РєС‚С‹ СЃРёСЃС‚РµРјС‹ - VersionSelector
 */
 contract WithVersionSelector
 {
-    //Контракт IVersionSelector
+    //РљРѕРЅС‚СЂР°РєС‚ IVersionSelector
     IVersionSelector internal selector;
     
-    //Конструктор
-    //@param _selector адрес контракта IVersionSelector 
+    //РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ
+    //@param _selector Р°РґСЂРµСЃ РєРѕРЅС‚СЂР°РєС‚Р° IVersionSelector 
     function WithVersionSelector(address _selector) public {
         require(_selector != 0x0);
         selector=IVersionSelector(_selector);
