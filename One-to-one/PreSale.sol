@@ -1,6 +1,6 @@
 pragma solidity ^0.4.20;
 
-import 'browser/Ownable.sol';
+
 import 'browser/InvestmentsStorage.sol';
 import 'browser/Sale.sol';
 
@@ -16,8 +16,12 @@ import 'browser/Sale.sol';
 contract PreSale is Sale 
 {
     //Конструктор
-    function PreSale(address _versionSelectorAddress) Sale(_versionSelectorAddress) public 
-    {
+    /* @param _versionSelectorAddress address адрес контракта VersionSelector
+     * @param _start uint время начала продаж в UNIX формате
+     */
+    function  PreSale(address _versionSelectorAddress,                                     uint _start) 
+                 Sale(        _versionSelectorAddress, address(0), address(0), address(0),      _start, 0) public
+   {
         //номер этапа
         stagenum=0;
         
@@ -26,16 +30,11 @@ contract PreSale is Sale
         //баланс окупателя увеличится на 1 * 10^18, т.к. decimals == 18
         rate = 1000;
         
-        //время начала
-        start = 1517868326;
-        
         //продолжительность этапа в днях
         period = 30;
         
         //количество токенов, которые получает агент для продажи
         saleTokenLimit = 1000000 * 1 ether;
-        //test saleTokenLimit = 2000 * 1 ether;
-        
     }
     
     //процент токенов дполнительно получаемых покупателем от количества оплаченных на этапе preICO

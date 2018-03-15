@@ -1,6 +1,6 @@
 pragma solidity ^0.4.20;
 
-import 'browser/Ownable.sol';
+
 import 'browser/InvestmentsStorage.sol';
 import 'browser/Sale.sol';
 
@@ -24,23 +24,23 @@ import 'browser/Sale.sol';
 contract MainSale2 is Sale {
   
     //Конструктор
-    function MainSale2(address _versionSelectorAddress) Sale(_versionSelectorAddress) public
-    {
+    /* @param _versionSelectorAddress address адрес контракта VersionSelector
+     * @param _restrictedAddress address адрес получателя токенов команды
+     * @param _reservedAddress address адрес получателя токенов команды (резерв)
+     * @param _bountyAddress address адрес получателя токенов для баунти
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function MainSale2(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) 
+                  Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal) public
+   {
         //Количество токенов для продажи
         stagenum=2;
         
         //Количество токенов для продажи
         saleTokenLimit = 15000000 * 1 ether;
-        
-        //адрес APLEX (команда)
-        restricted = 0x37F51960b8AACdFE323b616768AE18828D8F4eCD;//0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
-        
-        //адрес APLEX (bounty)
-        bounty = 0x37F51960b8AACdFE323b616768AE18828D8F4eCD;//0x583031D1113aD414F02576BD6afaBfb302140225;
-        
-        //адрес APLEX (резерв)
-        reserved = 0x37F51960b8AACdFE323b616768AE18828D8F4eCD;//0x8070c0D731Efc7c041096a2D1B90805b6Db79dC6;
-        
+    
         //процент токенов переводимый на адрес APLEX (команда)
         restrictedPercent = 10;
         
@@ -55,14 +55,8 @@ contract MainSale2 is Sale {
         //баланс окупателя увеличится на 1 * 10^18, т.к. decimals == 18
         rate = 1000;
         
-        //время начала  в UNIX формате
-        start = 1519761460;
-        
         //продолжительность этапа в днях
         period = 28;
-        
-        //Возможно, введём ограничение на масмальное количество токенов на счету
-        maxAccountVal = 0;
     }
     
     //Расчет максимального количество токенов, доступных к покупке
@@ -77,10 +71,22 @@ contract MainSale2 is Sale {
        max2buy=max.div(rate).mul(rate); 
     }
     
-  
-    //функция покупки токенов с переводом на служебные адреса
+    //Внутренняя переменная, для предотвращения многократного вызова функции
+    //установки времени блокировки служебных адресов в контракте токена
+    bool BlockTimeIsSet=false;
+
+   //функция покупки токенов с переводом на служебные адреса 
     function buyTokens() public canBuy  payable
     {
+        //Если время ещё не выставлено
+        if (!BlockTimeIsSet)
+        {
+            //Устанавливаем блокировки. 
+            token.SetBlockTime(restricted, restrictedBlockTime);
+            token.SetBlockTime(reserved, reservedBlockTime);
+            BlockTimeIsSet=true;
+        }
+        
         //оплачено токенов
         uint tokens = rate.mul(msg.value);
         

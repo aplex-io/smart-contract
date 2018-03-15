@@ -1,6 +1,6 @@
 pragma solidity ^0.4.20;
 
-import 'browser/Ownable.sol';
+
 import 'browser/SafeMath.sol';
 import 'browser/WithSaleAgent.sol';
 
@@ -18,7 +18,11 @@ contract Sale is Ownable, WithVersionSelector
 {
     using SafeMath for uint;
     
-    uint public maxAccountVal = 0;
+    //Максимально возможное значение баланса на счету
+    //Может вводится во избежании ситуации,
+    //когда все токены сосредоточены на малом количестве счетов
+    //(maxAccountVal = 0, означает отсутствие ограничений)
+    uint public maxAccountVal = 0; 
     
     //номер этапа
     uint8 public stagenum = 0;
@@ -64,6 +68,17 @@ contract Sale is Ownable, WithVersionSelector
     //баланс окупателя увеличится на 1 * 10^18, т.к. decimals == 18
     uint public rate;
     
+    
+    //Здесь устанвливаем только значение времени, сами блокировки можно выставить 
+    //только после установки создаваемого агента агентом продажи
+    //это сделано в функции buyTokens 
+    //
+    //время, на которое блокирууются токены на счету restricted
+    uint restrictedBlockTime = 183 * 1 days;
+        
+    //время, на которое блокирууются токены на счету reserved
+    uint reservedBlockTime = 1 years;
+    
     //показывает время окончания этапа
     function saleEnd() public view returns (uint) { return start.add(period * 1 days); }
     
@@ -103,11 +118,34 @@ contract Sale is Ownable, WithVersionSelector
     }
     
     //Конструктор
-    function Sale(address _versionSelectorAddress) WithVersionSelector(_versionSelectorAddress) public
+    /* @param _versionSelectorAddress address адрес контракта VersionSelector
+     * @param _restrictedAddress address адрес получателя токенов команды
+     * @param _reservedAddress address адрес получателя токенов команды (резерв)
+     * @param _bountyAddress address адрес получателя токенов для баунти
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function Sale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) WithVersionSelector(_versionSelectorAddress) public
     {
         //получаем адрес токена от селектора
         token = WithSaleAgent(selector.curAPLXTokenAddress());//token=new SimpleAPXToken()
         require(address(token) != 0x0);
+        
+        //адрес APLEX (команда)
+        restricted = _restrictedAddress;
+        
+        //адрес APLEX (bounty)
+        bounty = _bountyAddress;
+        
+        //адрес APLEX (резерв)
+        reserved = _reservedAddress;
+        
+        //время начала  в UNIX формате
+        start = _start;
+        
+        //Возможно, введём ограничение на масмальное количество токенов на счету
+        maxAccountVal = _maxAccountVal;
     }
     
     //fallback функция

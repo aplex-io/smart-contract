@@ -33,7 +33,17 @@ import 'browser/Sale.sol';
 */
 contract MainSale is Sale {
     //Конструктор
-    function MainSale(address _versionSelectorAddress) Sale(_versionSelectorAddress) public {
+    /* @param _versionSelectorAddress address адрес контракта VersionSelector
+     * @param _restrictedAddress address адрес получателя токенов команды
+     * @param _reservedAddress address адрес получателя токенов команды (резерв)
+     * @param _bountyAddress address адрес получателя токенов для баунти
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) 
+                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal) public 
+   {
         
         //Количество токенов для продажи
         saleTokenLimit = 25000000 * 1 ether;
@@ -41,49 +51,22 @@ contract MainSale is Sale {
         //номер этапа
         stagenum=1;
         
-        //адрес APLEX (команда)
-        restricted = 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB;
-        
-        //адрес APLEX (bounty)
-        bounty = 0x583031D1113aD414F02576BD6afaBfb302140225;
-        
-        //адрес APLEX (резерв)
-        reserved = 0x8070c0D731Efc7c041096a2D1B90805b6Db79dC6;
-        
-        //время, на которое блокирууются токены на счету restricted
-        uint restrictedBlockTime = 183 * 1 days;
-        
-        //время, на которое блокирууются токены на счету reserved
-        uint reservedBlockTime = 1 years;
-        
-        //добавляем блокировку для счета команды
-        token.AddBlockTime(restricted, restrictedBlockTime);
-            
-        //добавляем блокировку для счета резерва
-        token.AddBlockTime(reserved, reservedBlockTime);
-        
         //процент токенов переводимый на адрес APLEX (команда)
         restrictedPercent = 10;
         
         //адрес APLEX (резерв)
-        reservedPercent=5;
+        reservedPercent = 5;
         
         //процент токенов переводимый на адрес APLEX (bounty)
-        bountyPercent=5;
+        bountyPercent = 5;
         
         //количество токенов, продаваемых за 1 Ether
         //Внимание! При rate = 1 и покупке 1 APLX за 1 Ether
         //баланс окупателя увеличится на 1 * 10^18, т.к. decimals == 18
         rate = 1000;
         
-        //время начала  в UNIX формате
-        start = 1519761460;
-        
         //продолжительность этапа в днях
         period = 28;
-        
-        //Возможно, введём ограничение на масмальное количество токенов на счету
-        maxAccountVal = 0;
     }
     
     //Расчет максимального количество токенов, доступных к покупке
@@ -201,10 +184,24 @@ contract MainSale is Sale {
        //избавляемся от остатка
         max2buy=max.div(rate).mul(rate);
     }
-   
+    
+    
+    //Внутренняя переменная, для предотвращения многократного вызова функции
+    //установки времени блокировки служебных адресов в контракте токена
+    bool BlockTimeIsSet=false;
+
    //функция покупки токенов с бонусами и переводом на служебные адреса 
-   function buyTokens() public canBuy payable
-   {
+    function buyTokens() public canBuy  payable
+    {
+        //Если время ещё не выставлено
+        if (!BlockTimeIsSet)
+        {
+            //Устанавливаем блокировки. 
+            token.SetBlockTime(restricted, restrictedBlockTime);
+            token.SetBlockTime(reserved, reservedBlockTime);
+            BlockTimeIsSet=true;
+        }
+        
         //оплачено токенов
         uint tokens = rate.mul(msg.value);
       

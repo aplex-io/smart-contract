@@ -116,3 +116,4 @@ contract APLXToken is BurnableToken, WithSaleAgent {
             burn(balances[saleAgent]);
     }
 }
+

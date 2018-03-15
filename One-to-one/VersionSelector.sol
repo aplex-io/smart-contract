@@ -130,10 +130,15 @@ contract VersionSelector is Ownable, IVersionSelector
     }
     
     //Создание агента Presale и установка текущим (только владелец)
-    function CreatePresale() public onlyOwner  
+    /*
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function CreatePresale(uint _start) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        PreSale sa=new PreSale(this);
+        PreSale sa=new PreSale(this,  _start);
         require(address(sa)!=0x0);
         uint amount=sa.saleTokenLimit();
         require(amount>0);
@@ -145,10 +150,18 @@ contract VersionSelector is Ownable, IVersionSelector
     
     
     //Создание агента MainSale и установка текущим  (только владелец)
-    function CreateMainSale() public onlyOwner  
+     /*
+     * @param _restrictedAddress address адрес получателя токенов команды
+     * @param _reservedAddress address адрес получателя токенов команды (резерв)
+     * @param _bountyAddress address адрес получателя токенов для баунти
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function CreateMainSale(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale sa=new MainSale(this);
+        MainSale sa=new MainSale(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal);
         require(address(sa)!=0x0);
         uint amount=sa.saleTokenLimit();
         require(amount>0);
@@ -158,12 +171,23 @@ contract VersionSelector is Ownable, IVersionSelector
     }
     
     //Создание агента MainSale2 и установка текущим (только владелец)
-    function CreateMainSale2() public onlyOwner  
+     /*
+     * @param _restrictedAddress address адрес получателя токенов команды
+     * @param _reservedAddress address адрес получателя токенов команды (резерв)
+     * @param _bountyAddress address адрес получателя токенов для баунти
+     * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     */
+    function CreateMainSale2(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale2 sa=new MainSale2(this);
+        //"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c","0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db","0x583031d1113ad414f02576bd6afabfb302140225","1521148938","0"
+        //"0x37F51960b8AACdFE323b616768AE18828D8F4eCD", "0x37F51960b8AACdFE323b616768AE18828D8F4eCD","0x37F51960b8AACdFE323b616768AE18828D8F4eCD","1521148938","0"
+        MainSale2 sa=new MainSale2(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal);
         require(address(sa)!=0x0);
         uint amount=sa.saleTokenLimit();
+        //uint amount=2500000000000000000000000;
         require(amount>0);
         require(curAPLXTokenAddress.setSaleAgent(address(sa)));
         require(curAPLXTokenAddress.transferToAgent(amount));
@@ -176,3 +200,4 @@ contract VersionSelector is Ownable, IVersionSelector
         setCurAPLXTokenAddress(address(new APLXToken(address(this))));
     }
 }
+
