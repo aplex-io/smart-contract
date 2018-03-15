@@ -92,7 +92,7 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
     function getAgentBalance() public view returns (uint);
     
     //получение текущего баланса 
-    function getBalance(address caller) public view returns (uint)
+    function getBalance(address caller) public view returns (uint);
         
     //перевод токенов со счета агента (только агент)
     function transferFromAgent(address _to, uint _value) public returns (bool);

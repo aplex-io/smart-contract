@@ -48,7 +48,7 @@ contract InvestmentsStorage is WithVersionSelector
     uint public mainsale2wei = 0;
     
     //условия софткап - при достижении все средства переводятся на счёт APLEX
-    uint public constant softcap = 80000 * 1 ether;
+    uint public constant softcap = 8000 * 1 ether;
     
     //блокировка вывода средств 
     bool public blockWithdraw = true;

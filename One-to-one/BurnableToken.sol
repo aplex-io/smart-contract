@@ -1,12 +1,12 @@
 pragma solidity ^0.4.20;
-import 'browser/BasicToken.sol';
-//import 'browser/StandardToken.sol';
+
+import 'browser/StandardToken.sol';
 
 /**
  * @title Burnable Token
  * @dev Token that can be irreversibly burned (destroyed).
  */
-contract BurnableToken is /*StandardToken*/ BasicToken {
+contract BurnableToken is StandardToken {
  
   /**
    * @dev Burns a specific amount of tokens.

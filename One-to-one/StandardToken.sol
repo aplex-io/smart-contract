@@ -44,8 +44,17 @@ contract StandardToken is ERC20, BasicToken {
    * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
    * @param _spender The address which will spend the funds.
    * @param _value The amount of tokens to be spent.
+   *
+   * 
+   * Я предлагаю просто разрешить выполнение этой функции при allowed[msg.sender][_spender]==0 || _value==0 
    */
   function approve(address _spender, uint256 _value) public returns (bool) {
+      
+    /*
+     * Добавлено во избежании описанного выше в комментарии случая
+    */
+    require(_value==0 || allowed[msg.sender][_spender] == 0);
+    
     allowed[msg.sender][_spender] = _value;
     Approval(msg.sender, _spender, _value);
     return true;
@@ -87,3 +96,4 @@ contract StandardToken is ERC20, BasicToken {
   }
 
 }
+
