@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
 import 'browser/WithVersionSelector.sol';
 import 'browser/Ownable.sol';
@@ -20,6 +20,8 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
      
      //UNIX время, когда закончилось ICO (выставляется агентом при финализации)
      uint public endSales=0;
+     
+     //Блокировка обмена
      bool blockExchange=true;
      
      //Конструктор
@@ -62,14 +64,15 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
          }
      }
      
-       modifier isSaleAgent 
-       {
-             require(address(selector)!=0x0 ); //VersionSelector непустой
-             require(saleAgent != 0x0 ); //агент не пустой
-             require(selector.curSaleAgentAddress() == msg.sender ); //проверяем установлен ли saleAgent в VersionSelector 
-             require(msg.sender == saleAgent); //агент
-             _;
-        }
+     //Модификатор - выполнение только агентом 
+    modifier isSaleAgent 
+    {
+        require(address(selector)!=0x0 ); //VersionSelector непустой
+        require(saleAgent != 0x0 ); //агент не пустой
+        require(selector.curSaleAgentAddress() == msg.sender ); //проверяем установлен ли saleAgent в VersionSelector 
+        require(msg.sender == saleAgent); //агент
+        _;
+    }
      
      
      //установка текущего агента (только владелец)
@@ -80,13 +83,16 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
     }
      
     //получение адреса текущего агента 
-    function getAgent() public view returns (address agent)
+    function getAgent() public view returns (address)
     {
         return saleAgent;
     }
     
     //получение текущего баланса агента
-    function getAgentBalance() public view returns (uint agentbalance);
+    function getAgentBalance() public view returns (uint);
+    
+    //получение текущего баланса 
+    function getBalance(address caller) public view returns (uint)
         
     //перевод токенов со счета агента (только агент)
     function transferFromAgent(address _to, uint _value) public returns (bool);

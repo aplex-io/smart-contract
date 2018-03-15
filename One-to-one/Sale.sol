@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
 import 'browser/Ownable.sol';
 import 'browser/SafeMath.sol';
@@ -18,13 +18,15 @@ contract Sale is Ownable, WithVersionSelector
 {
     using SafeMath for uint;
     
+    uint public maxAccountVal = 0;
+    
     //номер этапа
-    uint8 public stagenum=0;
+    uint8 public stagenum = 0;
 
     //процент токенов переводимый на адрес APLEX (команда)
     uint restrictedPercent;
 
-   //процент токенов переводимый на адрес APLEX (bounty)
+    //процент токенов переводимый на адрес APLEX (bounty)
     uint bountyPercent;
     
     //процент токенов переводимый на адрес APLEX (резерв)

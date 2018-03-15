@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
 import 'browser/Ownable.sol';
 import 'browser/InvestmentsStorage.sol';
@@ -91,9 +91,11 @@ contract PreSale is Sale
           
         //Получаем InvestmentsStorage
         InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
+        
         //Отправляем средства в investmentsStorage с указанием отправителя 
         //и номера этапа 
         ist.AddWei.value(msg.value)(msg.sender, stagenum);
+        
         //переводим токены покупателю
         token.transferFromAgent(msg.sender, totaltokens); 
     }   

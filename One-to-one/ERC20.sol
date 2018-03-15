@@ -1,7 +1,7 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
-
-import 'browser/ERC20Basic.sol';
+//import "github.com/aplex-io/smart-contract/One-to-one/ERC20Basic.sol";
+import "browser/ERC20Basic.sol";
 
 /**
  * @title ERC20 interface

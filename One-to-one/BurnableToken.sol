@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 import 'browser/BasicToken.sol';
 //import 'browser/StandardToken.sol';
 
@@ -23,4 +23,3 @@ contract BurnableToken is /*StandardToken*/ BasicToken {
   event Burn(address indexed burner, uint indexed value);
  
 }
- 

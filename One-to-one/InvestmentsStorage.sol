@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
 
 import 'browser/WithVersionSelector.sol';
@@ -39,22 +39,22 @@ contract InvestmentsStorage is WithVersionSelector
     }
     
     //количество средств, полученных на этапе preSale
-    uint public presalewei=0;
+    uint public presalewei = 0;
     
     //количество средств, полученных на этапе MainSale
-    uint public mainsalewei=0;
+    uint public mainsalewei = 0;
     
     //количество средств, полученных на этапе MainSale2
-    uint public mainsale2wei=0;
+    uint public mainsale2wei = 0;
     
     //условия софткап - при достижении все средства переводятся на счёт APLEX
-    uint public constant softcap=8000 * 1 ether;
+    uint public constant softcap = 80000 * 1 ether;
     
     //блокировка вывода средств 
     bool public blockWithdraw = true;
     
     //количество средств, переведённых на счёт APLEX
-    uint public transferred2Multisig=0;
+    uint public transferred2Multisig = 0;
     
     //запрещает перевод средств на счёт APLEX после preSale и до достижения
     //софткап
@@ -62,7 +62,7 @@ contract InvestmentsStorage is WithVersionSelector
     
     
     //адрес счёта APLEX
-    address constant multisig=0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
+    address constant multisig = 0x9A0e9274883dE02B52325739CfeAD7fB6dA4058d;//0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C;
     
     
     //конструктор
@@ -106,7 +106,7 @@ contract InvestmentsStorage is WithVersionSelector
             //preICO
             
             //увеличиваем значение сборов за этап
-            presalewei=presalewei.add(msg.value);
+             presalewei=presalewei.add(msg.value);
             
             //переводим на адрес APLEX
             multisig.transfer(msg.value);

@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 import 'browser/StandardToken.sol';
 import 'browser/Ownable.sol';
 

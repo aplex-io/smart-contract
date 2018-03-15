@@ -1,6 +1,6 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
-import 'browser/Ownable.sol';
+
 import 'browser/ExchangableFromAPLX.sol';
 import 'browser/InvestmentsStorage.sol';
 import 'browser/IVersionSelector.sol';
@@ -21,162 +21,158 @@ import 'browser/test.sol';
 * При реализации системы контрактов продажи токенов мы ограничиваем возможности 
 * замены версий контрактов, чтобы гарантировать объявленные условия продажи
 */
-contract VersionSelector is Ownable, IVersionSelector  {
-
-    address public curAPLXTokenAddress;
+contract VersionSelector is Ownable, IVersionSelector
+{
+    //токен APLX
+    WithSaleAgent public curAPLXTokenAddress;
+    
+    //токен APLC
     ExchangableFromAPLX public curAPLCTokenAddress;
+    
+    //адрес контракта маркета (пока ен используется)
     address public curMarketAddress;
-    address public curSaleAgentAddress;
+    
+    //текущий агент распродажи
+    Sale public curSaleAgentAddress;
+    
+    //Контракт, собирающего инвестиции и управляющего ими
     InvestmentsStorage public investmentsStorage;
-    
-    
 
-    function VersionSelector() public {
+
+    //Конструктор
+    function VersionSelector() public 
+    {
+        //создание контракта управления инвестициями
         investmentsStorage=new InvestmentsStorage(address(this));
     }
 
-  function setCurMarketAddress(address _newaddr) public onlyOwner {
- 
+  //Установка текущего адреса маркета (только владелец)
+  function setCurMarketAddress(address _newaddr) public onlyOwner
+  {
       curMarketAddress = _newaddr;
   }
  
-  function setCurAPLXTokenAddress(address _newaddr) public onlyOwner {
+ 
+   //Установка текущего адреса токена APLX (только владелец)
+   function setCurAPLXTokenAddress(address _newaddr) public onlyOwner
+   {
        
-      curAPLXTokenAddress = _newaddr;
+      curAPLXTokenAddress = WithSaleAgent(_newaddr);
       
    }
    
-    function setCurAPLCTokenAddress(address _newaddr) public onlyOwner {
-       
+   //Установка текущего адреса токена APLC (только владелец)
+   function setCurAPLCTokenAddress(address _newaddr) public onlyOwner
+   {
       curAPLCTokenAddress = ExchangableFromAPLX(_newaddr);
-      
    }
    
-  function setCurSaleAgentAddress(address _newaddr) public onlyOwner {
-     
+   //Установка текущего адреса агента продажи токенв APLX (только владелец)
+   function setCurSaleAgentAddress(address _newaddr) public onlyOwner
+   {
+      //Если у токена агент совпадает или его удалось изменить
       if (WithSaleAgent(curAPLXTokenAddress).getAgent() == _newaddr || WithSaleAgent(curAPLXTokenAddress).setSaleAgent(_newaddr))
       {
-           curSaleAgentAddress = _newaddr;
-           
+           curSaleAgentAddress = Sale(_newaddr);
       }
      
-  }
+   }
   
-  function UnblockExchangeAPLX() public onlyOwner
-  {
-      WithSaleAgent(curAPLXTokenAddress).UnblockExchange();
-  }
+   //Разблокировка обмена APLX на APLC (только владелец)
+   function UnblockExchangeAPLX() public onlyOwner
+   {
+       WithSaleAgent(curAPLXTokenAddress).UnblockExchange();
+   }
 
-// 
-    
-   function transferToAgent(uint amount) public onlyOwner returns(bool res) {
+
+   //Перевод средств агенту  (только владелец)
+   function transferToAgent(uint amount) public onlyOwner returns(bool res)
+   {
         res = false;
-        require(address(curAPLXTokenAddress)!=0 && curSaleAgentAddress!=0 && WithSaleAgent(curAPLXTokenAddress).getAgent()==curSaleAgentAddress);
-        res = WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount);
-    }
-    
-    
-    function finalizeAgentSale() public  returns(bool res) {
-        res = false;
-        require(curAPLXTokenAddress!=0 && curSaleAgentAddress!=0 && WithSaleAgent(curAPLXTokenAddress).getAgent()==curSaleAgentAddress);
+        //токен и агент должны быть установлены, агент здесь и в токене должны совпадать
+        require(address(curAPLXTokenAddress)!=0 && address(curSaleAgentAddress)!=0 && curAPLXTokenAddress.getAgent()==address(curSaleAgentAddress));
         
+        //перевод
+        res = WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount);
+   }
+    
+    //Закрываем распродажу текущего агента
+    function finalizeAgentSale() public  returns(bool res)
+    {
+        res = false;
+        //токен и агент должны быть установлены, агент здесь и в токене должны совпадать
+        require(address(curAPLXTokenAddress)!=0 && address(curSaleAgentAddress)!=0 && curAPLXTokenAddress.getAgent()==address(curSaleAgentAddress));
+        
+        //Если успешно завершили этап у агнета
         if (Sale(curSaleAgentAddress).finalizeSale())
         {
+            //обнуляем текущего агента у токена
+            curAPLXTokenAddress.setSaleAgent(0);
+            
+            //обнуляем текущего агента и здесь
             setCurSaleAgentAddress(0);
+            
+            //Если это был последний этап, должно было выть выставлено время
+            //окончания продаж
             if (WithSaleAgent(curAPLXTokenAddress).endSales()!=0)
             {
+                //Тогда вызываем закрытие в investmentsStorage
                 investmentsStorage.finalizeLastStage();
             }
             res = true;   
         }
     }
     
-    
-    //Функции Create**** сделаны для удобства отладки и позволяют сразу становится 
-    // владельцем создаваемых контрактов. При необходимости создания новой версии извне
-    // нужно будет  выставлять агента продажи в токене а потом вызывать tranferownership(адрес VS) у регистрируемого контракта 
-    
-    function CreatePresale() public onlyOwner  {
-        require(address(curAPLXTokenAddress) != 0x0);
-        Sale psa=new PreSale(this);
-        require(address(psa)!=0x0);
-        //uint amount=psa.saleTokenLimit();//  Не работает AtAddress после такого преобразования при Enviroment JavaSript VM, хотя в тестовой KovanNet вроде работало норм
-        uint amount=1000000000000000000000000; //1300
-        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(address(psa)))
-        {
-            
-            require(amount > 0);
-            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
-            {
-                curSaleAgentAddress = psa;
-                return;
-            }
-            PreSale(psa).killme();
-        }
-        PreSale(psa).killme();
-        
-    }
-    
-    
+    //Получает баланс текущего агента
     function getsaleAgentBalance() public view returns(uint agentbal)
     {
-        return Sale(curSaleAgentAddress).myBalance();
+        return curSaleAgentAddress.myBalance();
     }
     
-    function CreateMainsale() public onlyOwner  {
-        
+    //Создание агента Presale и установка текущим (только владелец)
+    function CreatePresale() public onlyOwner  
+    {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale msa=new MainSale(this);
-        require(address(msa)!=0x0);
-        //uint amount=msa.saleTokenLimit();
-        uint amount=10 ether;//25000000000000000000000000;
-        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(msa))
-        {
-            
-            require(amount > 0);
-            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
-            {
-                curSaleAgentAddress = msa;
-                return ;
-            }
-           MainSale(msa).killme();
-           return;
-        }
-        
-        MainSale(msa).killme();
-        return ;
+        PreSale sa=new PreSale(this);
+        require(address(sa)!=0x0);
+        uint amount=sa.saleTokenLimit();
+        require(amount>0);
+        require(curAPLXTokenAddress.setSaleAgent(address(sa)));
+        require(curAPLXTokenAddress.transferToAgent(amount));
+        curSaleAgentAddress = sa;
     }
     
-     function CreateMainsale2() public onlyOwner  {
-        
+    
+    
+    //Создание агента MainSale и установка текущим  (только владелец)
+    function CreateMainSale() public onlyOwner  
+    {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale2 msa=new MainSale2(this);
-        require(address(msa)!=0x0);
-        //uint amount=msa.saleTokenLimit();
-        uint amount=50000 ether;//25000000000000000000000000;
-        if (WithSaleAgent(curAPLXTokenAddress).setSaleAgent(address(msa)))
-        {
-            
-            require(amount > 0);
-            if (WithSaleAgent(curAPLXTokenAddress).transferToAgent(amount))
-            {
-                curSaleAgentAddress = msa;
-                return ;
-            }
-           MainSale2(msa).killme();
-           return;
-        }
-        
-        MainSale2(msa).killme();
-        
+        MainSale sa=new MainSale(this);
+        require(address(sa)!=0x0);
+        uint amount=sa.saleTokenLimit();
+        require(amount>0);
+        require(curAPLXTokenAddress.setSaleAgent(address(sa)));
+        require(curAPLXTokenAddress.transferToAgent(amount));
+        curSaleAgentAddress = sa;
     }
     
-     function CreateAPLXToken() public onlyOwner returns (address) {
-               
-               address token=address(new APLXToken(address(this)));
-               setCurAPLXTokenAddress(token);
-               return token;
+    //Создание агента MainSale2 и установка текущим (только владелец)
+    function CreateMainSale2() public onlyOwner  
+    {
+        require(address(curAPLXTokenAddress) != 0x0);
+        MainSale2 sa=new MainSale2(this);
+        require(address(sa)!=0x0);
+        uint amount=sa.saleTokenLimit();
+        require(amount>0);
+        require(curAPLXTokenAddress.setSaleAgent(address(sa)));
+        require(curAPLXTokenAddress.transferToAgent(amount));
+        curSaleAgentAddress = sa;
     }
     
- 
+    //Создание токена APLX и установка текущим (только владелец)
+    function CreateAPLXToken() public onlyOwner
+    {
+        setCurAPLXTokenAddress(address(new APLXToken(address(this))));
+    }
 }

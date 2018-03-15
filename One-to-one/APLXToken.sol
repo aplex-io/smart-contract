@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.4.20;
+pragma solidity ^0.4.20;
 
 import 'browser/WithSaleAgent.sol';
 import 'browser/BurnableToken.sol';
@@ -51,10 +51,16 @@ contract APLXToken is BurnableToken, WithSaleAgent {
     }
  
     //получение текущего баланса агента
-    function getAgentBalance() public view returns (uint agentbalance)
+    function getAgentBalance() public view returns (uint)
     {
         require(saleAgent!=0x0);
         return balances[saleAgent];
+    }
+    
+    //получение текущего баланса 
+    function getBalance(address caller) public view returns (uint)
+    {
+       return balances[caller];
     }
      
     //перевод токенов со счета агента (только агент)
