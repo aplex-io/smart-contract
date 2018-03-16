@@ -31,14 +31,14 @@ contract PreSale is Sale
         rate = 1000;
         
         //продолжительность этапа в днях
-        period = 30;
+        period = 10;
         
         //количество токенов, которые получает агент для продажи
         saleTokenLimit = 1000000 * 1 ether;
     }
     
     //процент токенов дполнительно получаемых покупателем от количества оплаченных на этапе preICO
-    uint presaleBonusPercent=40;
+    uint presaleBonusPercent = 40;
    
     //функция окончания продажи агентом токенов 
     function finalizeSale() public onlyOwner  returns (bool)
