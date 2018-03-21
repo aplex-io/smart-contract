@@ -72,7 +72,6 @@ contract APLXToken is BurnableToken, WithSaleAgent {
     //перевод токенов на счёт агента (только владелец)
     function transferToAgent(uint _value) public onlyOwner returns (bool) {
         require(saleAgent != 0x0);
-        
         return transfer(saleAgent, _value);
     }
     

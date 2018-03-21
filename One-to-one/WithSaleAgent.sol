@@ -30,9 +30,12 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
      }
     
     //Установка времени блокировки продаж после ICO для адреса blocking на время time (UNIX формат)
-    function AddBlockTime(address blocking, uint time) public isSaleAgent
+    function SetBlockTime(address blocking, uint time) public isSaleAgent
     {
-        blocked[blocking]=time;
+        if (blocked[blocking]!=time)
+        {
+            blocked[blocking]=time;
+        }
     }
     
     //Установка времени окончания ICO агентом при финализации 
@@ -103,3 +106,4 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
     //сжигание всех токенов агента (только агент)
     function burnAllOfAgent() public;
 }
+

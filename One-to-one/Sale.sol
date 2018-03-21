@@ -24,6 +24,12 @@ contract Sale is Ownable, WithVersionSelector
     //(maxAccountVal = 0, означает отсутствие ограничений)
     uint public maxAccountVal = 0; 
     
+    //минимально возможная сумма покупки (Если 0, то без ограничений)
+    uint public minBuy = 0;
+    
+    //показывает количество проданных токенов (вместе с бонусами и служебными)
+    uint public sold = 0;
+    
     //номер этапа
     uint8 public stagenum = 0;
 
@@ -89,13 +95,77 @@ contract Sale is Ownable, WithVersionSelector
         return token.getAgentBalance(); 
     }
     
-    //показывает максимальное количество токенов, доступных к покупке
-    function Max2BuyTokens() public view returns (uint max2buy);
+    //Расчет максимального количество токенов доступных к покупке,
+    //не учитывающий ограничения по максимальному счёту и минимальной покупке.
+    //Возвращает max2buy - максимально доступное олачиваемое количество,
+    //           maxbonused - получаемое при этом количество с бонусами 
+    function Max2BuyTokensTotal() public view returns (uint max2buy, uint maxbonused);
+    
+    //показывает максимальное количество wei, доступных к оплате
+    function Max2SpendWeiTotal() public view returns (uint maxwei)
+    {
+       uint max2buy = 0;
+       (max2buy, ) = Max2BuyTokensTotal();
+        maxwei = max2buy.div(rate);
+    }
    
     //показывает максимальное количество wei, доступных к оплате
     function Max2SpendWei() public view returns (uint maxwei)
     {
        maxwei = Max2BuyTokens().div(rate);
+    }
+    
+    //показывает максимальное количество токенов, доступных к покупке
+    //с учётом ограничений по максимальному счёту иминимальному вложению
+    function Max2BuyTokens() public view returns (uint)
+    {
+       uint rest = 0;
+       
+      
+       
+       //проверяем  ограничение на счёт, если такое есть. Если достигнуто,
+       //то купить нельзя
+       if (maxAccountVal > 0)
+       {
+           if (maxAccountVal <= token.getBalance(msg.sender))
+           {
+                return 0;
+           }
+           rest = maxAccountVal.sub(token.getBalance(msg.sender));
+       }
+       
+       //Если баланс меньше покупки с минимальной суммой вложения,
+       //то покупать нельзя
+       if (minBuy > 0 && myBalance().div(rate) < minBuy)
+       {
+          return 0; 
+       }
+       
+       
+       
+       uint maxbonused = 0;
+       uint max2buy = 0;
+       
+     
+       (max2buy, maxbonused) = Max2BuyTokensTotal();
+       
+       //Если максимально доступная сумма покупки, меньше покупки с минимальной суммой вложения,
+       //то покупать нельзя
+       if (minBuy > 0 && max2buy.div(rate) < minBuy)
+       {
+          return 0; 
+       }
+       
+       //Если остаток баланса, позволяет купить меньше, чем 
+       //ограничения по максимальному счёту, то возвращаем максимум по балансу
+       if (maxbonused < rest)
+       {
+           return max2buy;
+       }
+       
+       //В противном случае возвращаем максимум 
+       //по ограничениям по максимальному счёту
+       return rest;
     }
     
     
@@ -106,16 +176,14 @@ contract Sale is Ownable, WithVersionSelector
         //- время больше старта
         //- время меньше окончания
         //- агент совпадает с агентом проажи токена
-        //- максимальное количество wei, доступных к оплате > 0
+        //- максимальное количество wei, доступных к оплате >= минимально возможного для вложения или оно не установлено
         //- известен адрес контракта InvestmentsStorage
-        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && Max2SpendWei()>0 && address(selector.investmentsStorage())!=0;
+        //- не превышен лимит
+        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && (minBuy == 0 || Max2SpendWei() >= minBuy)  && address(selector.investmentsStorage())!=0 && sold < saleTokenLimit;
     }
     
-    //показывает количество проданных токенов (вместе с бонусами)
-    function sold() public view returns (uint)
-    {
-        return saleTokenLimit.sub(token.getAgentBalance()); 
-    }
+    
+    
     
     //Конструктор
     /* @param _versionSelectorAddress address адрес контракта VersionSelector
@@ -124,9 +192,11 @@ contract Sale is Ownable, WithVersionSelector
      * @param _bountyAddress address адрес получателя токенов для баунти
      * @param _start uint время начала продаж в UNIX формате
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+               (Если 0, то без ограничений)
+     * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
      *         (Если 0, то без ограничений)
      */
-    function Sale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) WithVersionSelector(_versionSelectorAddress) public
+    function Sale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) WithVersionSelector(_versionSelectorAddress) public
     {
         //получаем адрес токена от селектора
         token = WithSaleAgent(selector.curAPLXTokenAddress());//token=new SimpleAPXToken()
@@ -146,11 +216,15 @@ contract Sale is Ownable, WithVersionSelector
         
         //Возможно, введём ограничение на масмальное количество токенов на счету
         maxAccountVal = _maxAccountVal;
+        
+        //минимально возможная сумма вложения в Wei
+        minBuy = _minVal2Buy;
     }
     
     //fallback функция
     function() external payable 
     {
+        require(msg.value >= minBuy);
         buyTokens();
     }
 
@@ -167,3 +241,4 @@ contract Sale is Ownable, WithVersionSelector
         selfdestruct(owner);
     }
 }
+

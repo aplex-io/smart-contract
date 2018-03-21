@@ -31,9 +31,11 @@ contract MainSale2 is Sale {
      * @param _start uint время начала продаж в UNIX формате
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
+     * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
+     *         (Если 0, то без ограничений)
      */
-    function MainSale2(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) 
-                  Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal) public
+    function MainSale2(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) 
+                  Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy) public 
    {
         //Количество токенов для продажи
         stagenum=2;
@@ -59,16 +61,20 @@ contract MainSale2 is Sale {
         period = 28;
     }
     
-    //Расчет максимального количество токенов, доступных к покупке
-    //без этой функции можно было бы и обойтись, она носит информационный
-    //характер
-    function Max2BuyTokens() public view returns (uint max2buy)
+     //Расчет максимального количество токенов доступных к покупке,
+    //не учитывающий ограничения по максимальному счёту и минимальной покупке.
+    //Возвращает max2buy - максимально доступное олачиваемое количество,
+    //           maxbonused = max2buy - бонусов не предусмотрено 
+    function Max2BuyTokensTotal() public view returns (uint max2buy, uint maxbonused)
     {
        //вычисляем максимальное количество токенов к покупке 
        uint max = myBalance().mul(100).div(100 + restrictedPercent + bountyPercent + reservedPercent); 
        
        //обнуляем остаток
        max2buy=max.div(rate).mul(rate); 
+       
+       //бонусов не предусмотрено
+       maxbonused = max2buy;
     }
     
     //Внутренняя переменная, для предотвращения многократного вызова функции
@@ -109,6 +115,9 @@ contract MainSale2 is Sale {
         //проверяем доступность нужного количества токенов
         require( totaltokens <= myBalance());
       
+        //проверяем не будет ли превышен лимит продаж
+        require(sold.add(totaltokens) <= saleTokenLimit);
+       
         //получаем адрес контракта управления инветстициями
         InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
         
@@ -127,17 +136,16 @@ contract MainSale2 is Sale {
         
         //переводим токены покупателю
         token.transferFromAgent(msg.sender, tokens); 
-       
+        
+        //добавляем значение в количество проданных токенов
+        sold = sold.add(totaltokens);
     }
     
      //Закрытие этапа (только владелец) 
     function finalizeSale() public onlyOwner returns (bool)
     {
-        //если окончание по времени или осталось меньше rate токенов
-        //меньше rate за 1 wei не купишь, такие значения могут оставаться после 
-        //расчета процентов, поэтому их просто сжигаем  
-        //(напоминаю 1 токен на счету - это balances[address]==1*10^18)
-        if (now > saleEnd() || Max2SpendWei()<1) 
+        //если окончание по времени или токены кончились 
+        if (now > saleEnd() || Max2SpendWeiTotal() == 0) 
         {
             //сжигаем остатки
             token.burnAllOfAgent();
@@ -150,3 +158,4 @@ contract MainSale2 is Sale {
         return false;
     }
 }
+

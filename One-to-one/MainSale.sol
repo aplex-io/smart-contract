@@ -40,9 +40,11 @@ contract MainSale is Sale {
      * @param _start uint время начала продаж в UNIX формате
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
+     * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
+     *         (Если 0, то без ограничений)
      */
-    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) 
-                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal) public 
+    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) 
+                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy) public 
    {
         
         //Количество токенов для продажи
@@ -69,13 +71,16 @@ contract MainSale is Sale {
         period = 28;
     }
     
-    //Расчет максимального количество токенов, доступных к покупке
-    //без этой функции можно было бы и обойтись, она носит информационный
-    //характер
-    function Max2BuyTokens() public view returns (uint max2buy)
+    
+    
+    //Расчет максимального количество токенов доступных к покупке,
+    //не учитывающий ограничения по максимальному счёту и минимальной покупке.
+    //Возвращает max2buy - максимально доступное олачиваемое количество,
+    //           maxbonused - получаемое при этом количество с бонусами 
+    function Max2BuyTokensTotal() public view returns (uint max2buy, uint maxbonused)
     {
         //получаем баланс агента
-        uint balance=myBalance();
+        uint balance = myBalance();
         
         //процент бонусов по времени
         uint tpercent = 0;
@@ -105,10 +110,10 @@ contract MainSale is Sale {
         
         //на бонусы покупателю при затратах в 100 ETH нужно будет выделить 
         //100*rate*lastBuyerPercent/100 токенов
-        uint maxbonused = maxwei * rate * lastBuyerPercent / 100;
+        uint maxbonusedTMP = maxwei * rate * lastBuyerPercent / 100;
         
         //добавляем процент на служебный адреса
-        uint total =  maxbonused * percent / 100;
+        uint total =  maxbonusedTMP * percent / 100;
         
         //Внутренняя переменная
         uint max;
@@ -121,9 +126,11 @@ contract MainSale is Sale {
              //                                 100*100*myBalance()
              //max = ---------------------------------------------------------------------------
              //      100*100 + 100 * lastBuyerPercent + 100 * percent + lastBuyerPercent*percent
-             max = myBalance().mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
+             max = balance.mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
              //избавляемся от остатка
              max2buy=max.div(rate).mul(rate); 
+             //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+             maxbonused = (max2buy * (100 +  lastBuyerPercent)) / 100;
              return;
         }
         
@@ -138,17 +145,19 @@ contract MainSale is Sale {
         
         //на бонусы покупателю при затратах в 50 ETH нужно будет выделить 
         //100*rate*lastBuyerPercent/100 токенов
-        maxbonused = maxwei * rate * lastBuyerPercent / 100;
+        maxbonusedTMP = maxwei * rate * lastBuyerPercent / 100;
         
         //добавляем процент на служебный адреса
-        total =  maxbonused * percent / 100;
+        total =  maxbonusedTMP * percent / 100;
         
         //Если баланс агента позволяет купить токенов на 50 ETH
         if (total <= balance)
         {
-              max = myBalance().mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
+              max = balance.mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
              //избавляемся от остатка
              max2buy=max.div(rate).mul(rate); 
+             //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+             maxbonused = (max2buy * (100 +  lastBuyerPercent)) / 100;
              return;
         }
         
@@ -163,26 +172,31 @@ contract MainSale is Sale {
         
         //на бонусы покупателю при затратах в 10 ETH нужно будет выделить 
         //100*rate*lastBuyerPercent/100 токенов
-        maxbonused = maxwei * rate * lastBuyerPercent / 100;
+        maxbonusedTMP = maxwei * rate * lastBuyerPercent / 100;
         
         //добавляем процент на служебный адреса
-        total =  maxbonused * percent / 100;
+        total =  maxbonusedTMP * percent / 100;
         
         //Если баланс агента позволяет купить токенов на 50 ETH
         if (total <= balance)
         {
-              max = myBalance().mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
+              max = balance.mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
              //избавляемся от остатка
              max2buy=max.div(rate).mul(rate); 
+             //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+             maxbonused = (max2buy * (100 +  lastBuyerPercent)) / 100;
              return;
         }
         
         //В остальных случаях остаётся только процент за время
         lastBuyerPercent = tpercent;
-        
-        max = myBalance().mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
+       
+        max = balance.mul(10000).div(percent*100 + lastBuyerPercent*100 + percent*lastBuyerPercent + 10000);
+       
        //избавляемся от остатка
         max2buy=max.div(rate).mul(rate);
+       //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+        maxbonused = (max2buy * (100 +  lastBuyerPercent)) / 100;
     }
     
     
@@ -262,6 +276,9 @@ contract MainSale is Sale {
         
         //проверяем доступность нужного количества токенов
         require(totaltokens <= myBalance());
+        
+         //проверяем не будет ли превышен лимит продаж
+        require(sold.add(totaltokens) <= saleTokenLimit);
       
         //получаем адрес контракта управления инветстициями
         InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
@@ -281,17 +298,17 @@ contract MainSale is Sale {
         
         //переводим токены с бонусами покупателю
         token.transferFromAgent(msg.sender, bonused); 
+        
+        //добавляем значение в количество проданных токенов
+        sold = sold.add(totaltokens);
     }
     
     
     //Закрытие этапа (только владелец) 
     function finalizeSale() public onlyOwner returns (bool)
     {
-        //если окончание по времени или осталось меньше rate токенов
-        //меньше rate за 1 wei не купишь, такие значения могут оставаться после 
-        //расчета процентов, поэтому их просто сжигаем  
-        //(напоминаю 1 токен на счету - это balances[address]==1*10^18)
-        if (now > saleEnd() || Max2SpendWei()<1 ) 
+        //если окончание по времени или токены кончились 
+        if (now > saleEnd() || Max2SpendWeiTotal() == 0) 
         {
            //сжигаем остатки
            token.burnAllOfAgent();
@@ -301,3 +318,4 @@ contract MainSale is Sale {
         return false;
     }
 }
+

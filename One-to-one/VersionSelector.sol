@@ -135,13 +135,15 @@ contract VersionSelector is Ownable, IVersionSelector
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
      */
-    function CreatePresale(uint _start) public onlyOwner  
+    /* "1521628365","1000000000000000000","10000000000" */
+    function CreatePresale(uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        PreSale sa=new PreSale(this,  _start);
-        require(address(sa)!=0x0);
-        uint amount=sa.saleTokenLimit();
-        require(amount>0);
+        PreSale sa=new PreSale(this,  _start, _maxAccountVal, _minVal2Buy);
+        require(address(sa) != 0x0);
+        //uint amount = sa.saleTokenLimit();
+        uint amount = 1000000 ether;
+        require(amount > 0);
         require(curAPLXTokenAddress.setSaleAgent(address(sa)));
         require(curAPLXTokenAddress.transferToAgent(amount));
         curSaleAgentAddress = sa;
@@ -158,10 +160,10 @@ contract VersionSelector is Ownable, IVersionSelector
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
      */
-    function CreateMainSale(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) public onlyOwner  
+    function CreateMainSale(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale sa=new MainSale(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal);
+        MainSale sa=new MainSale(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy);
         require(address(sa)!=0x0);
         uint amount=sa.saleTokenLimit();
         require(amount>0);
@@ -179,15 +181,15 @@ contract VersionSelector is Ownable, IVersionSelector
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
      */
-    function CreateMainSale2(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal) public onlyOwner  
+    function CreateMainSale2(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
         //"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c","0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db","0x583031d1113ad414f02576bd6afabfb302140225","1521148938","0"
         //"0x37F51960b8AACdFE323b616768AE18828D8F4eCD", "0x37F51960b8AACdFE323b616768AE18828D8F4eCD","0x37F51960b8AACdFE323b616768AE18828D8F4eCD","1521148938","0"
-        MainSale2 sa=new MainSale2(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal);
+        MainSale2 sa=new MainSale2(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy);
         require(address(sa)!=0x0);
-        uint amount=sa.saleTokenLimit();
-        //uint amount=2500000000000000000000000;
+        //uint amount=sa.saleTokenLimit();
+        uint amount=2500000000000000000000000;
         require(amount>0);
         require(curAPLXTokenAddress.setSaleAgent(address(sa)));
         require(curAPLXTokenAddress.transferToAgent(amount));

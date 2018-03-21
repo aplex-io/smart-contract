@@ -18,10 +18,14 @@ contract PreSale is Sale
     //Конструктор
     /* @param _versionSelectorAddress address адрес контракта VersionSelector
      * @param _start uint время начала продаж в UNIX формате
+     * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
+     *         (Если 0, то без ограничений)
+     * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
+     *         (Если 0, то без ограничений)
      */
-    function  PreSale(address _versionSelectorAddress,                                     uint _start) 
-                 Sale(        _versionSelectorAddress, address(0), address(0), address(0),      _start, 0) public
-   {
+    function  PreSale(address _versionSelectorAddress,                                     uint _start, uint _maxAccountVal,  uint _minVal2Buy) 
+                 Sale(        _versionSelectorAddress, address(0), address(0), address(0),      _start,      _maxAccountVal,       _minVal2Buy) public
+   { 
         //номер этапа
         stagenum=0;
         
@@ -35,6 +39,7 @@ contract PreSale is Sale
         
         //количество токенов, которые получает агент для продажи
         saleTokenLimit = 1000000 * 1 ether;
+        
     }
     
     //процент токенов дполнительно получаемых покупателем от количества оплаченных на этапе preICO
@@ -50,9 +55,9 @@ contract PreSale is Sale
            token.burnAllOfAgent();
            return true;
         }
-        
-        //Если токены кончились (осталось < rate * 10^-18 )
-        if (Max2SpendWei()<1) //меньше rate за 1 wei не купишь, такие значения могут оставаться после расчета процентов, поэтому их просто сжигаем  (напоминаю 1 токен на счету - это balances[address]==1*10^18)
+       
+        //Если токены кончились 
+        if ( Max2SpendWeiTotal() == 0) 
         {
             //сжигаем остатки
             token.burnAllOfAgent();
@@ -62,13 +67,21 @@ contract PreSale is Sale
     }
     
     
-     //показывает максимальное количество токенов, доступных к покупке
-    function Max2BuyTokens() public view returns (uint max2buy)
+    //Расчет максимального количество токенов доступных к покупке,
+    //не учитывающий ограничения по максимальному счёту и минимальной покупке.
+    //Возвращает max2buy - максимально доступное олачиваемое количество,
+    //           maxbonused - получаемое при этом количество с бонусами 
+    function Max2BuyTokensTotal() public view returns (uint max2buy, uint maxbonused)
     {
-      //Вычисляем количество баланс*100/140%)
+      //Вычисляем количество - баланс*100/140%)
        uint max = myBalance().mul(100).div(presaleBonusPercent.add(100));
+       
        //обнуляем остаток
-       max2buy=max.div(rate).mul(rate);
+       max2buy = max.div(rate).mul(rate);
+       
+       //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+       maxbonused = (max2buy * (100 +  presaleBonusPercent)) / 100;
+   
     }
     
      
@@ -87,6 +100,13 @@ contract PreSale is Sale
         
         //проверяем есть ли столько
         require( totaltokens <= myBalance());
+        
+        //проверяем не установлено ли максимальное значение количества токенов на счету,
+        //и не превышаем ли мы его покупкой
+        require(maxAccountVal==0 || totaltokens.add(token.getBalance(msg.sender)) <= maxAccountVal);
+        
+        //проверяем не будет ли превышен лимит продаж
+        require(sold.add(totaltokens) <= saleTokenLimit);
           
         //Получаем InvestmentsStorage
         InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
@@ -97,5 +117,8 @@ contract PreSale is Sale
         
         //переводим токены покупателю
         token.transferFromAgent(msg.sender, totaltokens); 
+        
+        //добавляем значение в количество проданных токенов
+        sold = sold.add(totaltokens);
     }   
 }
