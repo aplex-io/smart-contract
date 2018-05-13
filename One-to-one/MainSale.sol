@@ -43,8 +43,8 @@ contract MainSale is Sale {
      * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
      *         (Если 0, то без ограничений)
      */
-    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) 
-                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy) public 
+    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) 
+                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy,      _stagecap,      _isRefundable) public 
    {
         
         //Количество токенов для продажи
@@ -280,12 +280,9 @@ contract MainSale is Sale {
          //проверяем не будет ли превышен лимит продаж
         require(sold.add(totaltokens) <= saleTokenLimit);
       
-        //получаем адрес контракта управления инветстициями
-        InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
-        
-        //Отправляем средства в investmentsStorage с указанием отправителя 
-        //и номера этапа 
-        ist.AddWei.value(msg.value)(msg.sender, stagenum);
+        //Учитываем средства в родительском investmentsStorage с указанием 
+        //отправителя 
+        super.AddWei(msg.sender);
         
         //переводим токены команда
         token.transferFromAgent(restricted, restrictedTokens);
@@ -318,4 +315,3 @@ contract MainSale is Sale {
         return false;
     }
 }
-

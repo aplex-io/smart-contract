@@ -2,7 +2,6 @@ pragma solidity ^0.4.20;
 
 
 import 'browser/ExchangableFromAPLX.sol';
-import 'browser/InvestmentsStorage.sol';
 import 'browser/IVersionSelector.sol';
 import 'browser/WithSaleAgent.sol';
 import 'browser/PreSale.sol';
@@ -35,15 +34,10 @@ contract VersionSelector is Ownable, IVersionSelector
     //текущий агент распродажи
     Sale public curSaleAgentAddress;
     
-    //Контракт, собирающего инвестиции и управляющего ими
-    InvestmentsStorage public investmentsStorage;
-
-
     //Конструктор
     function VersionSelector() public 
     {
-        //создание контракта управления инвестициями
-        investmentsStorage=new InvestmentsStorage(address(this));
+        
     }
 
   //Установка текущего адреса маркета (только владелец)
@@ -104,21 +98,14 @@ contract VersionSelector is Ownable, IVersionSelector
         require(address(curAPLXTokenAddress)!=0 && address(curSaleAgentAddress)!=0 && curAPLXTokenAddress.getAgent()==address(curSaleAgentAddress));
         
         //Если успешно завершили этап у агнета
-        if (Sale(curSaleAgentAddress).finalizeSale())
+        if (Sale(curSaleAgentAddress).finalize())
         {
             //обнуляем текущего агента у токена
             curAPLXTokenAddress.setSaleAgent(0);
             
             //обнуляем текущего агента и здесь
             setCurSaleAgentAddress(0);
-            
-            //Если это был последний этап, должно было выть выставлено время
-            //окончания продаж
-            if (WithSaleAgent(curAPLXTokenAddress).endSales()!=0)
-            {
-                //Тогда вызываем закрытие в investmentsStorage
-                investmentsStorage.finalizeLastStage();
-            }
+           
             res = true;   
         }
     }
@@ -136,10 +123,10 @@ contract VersionSelector is Ownable, IVersionSelector
      *         (Если 0, то без ограничений)
      */
     /* "1521628365","1000000000000000000","10000000000" */
-    function CreatePresale(uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
+    function CreatePresale(uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        PreSale sa=new PreSale(this,  _start, _maxAccountVal, _minVal2Buy);
+        PreSale sa=new PreSale(this,  _start, _maxAccountVal, _minVal2Buy, _stagecap, _isRefundable);
         require(address(sa) != 0x0);
         //uint amount = sa.saleTokenLimit();
         uint amount = 1000000 ether;
@@ -160,10 +147,10 @@ contract VersionSelector is Ownable, IVersionSelector
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
      */
-    function CreateMainSale(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
+    function CreateMainSale(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
-        MainSale sa=new MainSale(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy);
+        MainSale sa=new MainSale(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy, _stagecap, _isRefundable);
         require(address(sa)!=0x0);
         uint amount=sa.saleTokenLimit();
         require(amount>0);
@@ -181,12 +168,12 @@ contract VersionSelector is Ownable, IVersionSelector
      * @param _maxAccountVal uint256 максимально возможное значение баланса на одном счету. 
      *         (Если 0, то без ограничений)
      */
-    function CreateMainSale2(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) public onlyOwner  
+    function CreateMainSale2(address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) public onlyOwner  
     {
         require(address(curAPLXTokenAddress) != 0x0);
         //"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c","0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db","0x583031d1113ad414f02576bd6afabfb302140225","1521148938","0"
         //"0x37F51960b8AACdFE323b616768AE18828D8F4eCD", "0x37F51960b8AACdFE323b616768AE18828D8F4eCD","0x37F51960b8AACdFE323b616768AE18828D8F4eCD","1521148938","0"
-        MainSale2 sa=new MainSale2(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy);
+        MainSale2 sa=new MainSale2(this, _restrictedAddress, _reservedAddress, _bountyAddress, _start, _maxAccountVal, _minVal2Buy, _stagecap, _isRefundable);
         require(address(sa)!=0x0);
         //uint amount=sa.saleTokenLimit();
         uint amount=2500000000000000000000000;
@@ -202,4 +189,3 @@ contract VersionSelector is Ownable, IVersionSelector
         setCurAPLXTokenAddress(address(new APLXToken(address(this))));
     }
 }
-

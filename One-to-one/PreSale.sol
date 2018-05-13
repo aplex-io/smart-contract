@@ -8,10 +8,11 @@ import 'browser/Sale.sol';
 /**
 * Контракт агента продажи токенов APLX. Получает токены на свой счёт и продаёт
 * их в рамках нулевого этапа ICO - PreICO .
-* Полученные средства незамедлительно переводятся на счёт контракта управления 
-* инветстициями InvestmentsStorage и не могут быть возвращены инвестору. 
-* Контракт InvestmentsStorage, в свою очередь, незамедлительно переводит 
-* полученные от этого агента средства счёт APLEX.
+* Полученные средства незамедлительно переводятся на счёт
+* APLEX (multisig родителя InvestmentsStorage) при достижении stagecap.
+* В противном случае средства остаются на 
+* счету контракта продажи до окночания этапа, после чего разюлокируется механизм 
+* возврата средств.
 */
 contract PreSale is Sale 
 {
@@ -23,11 +24,9 @@ contract PreSale is Sale
      * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
      *         (Если 0, то без ограничений)
      */
-    function  PreSale(address _versionSelectorAddress,                                     uint _start, uint _maxAccountVal,  uint _minVal2Buy) 
-                 Sale(        _versionSelectorAddress, address(0), address(0), address(0),      _start,      _maxAccountVal,       _minVal2Buy) public
+    function  PreSale(address _versionSelectorAddress,                                     uint _start, uint _maxAccountVal,  uint _minVal2Buy, uint _stagecap, bool _isRefundable) 
+                 Sale(        _versionSelectorAddress, address(0), address(0), address(0),      _start,      _maxAccountVal,       _minVal2Buy,      _stagecap,      _isRefundable) public
    { 
-        //номер этапа
-        stagenum=0;
         
         //количество токенов, продаваемых за 1 Ether
         //Внимание! При rate = 1 и покупке 1 APLX за 1 Ether
@@ -79,7 +78,8 @@ contract PreSale is Sale
        //обнуляем остаток
        max2buy = max.div(rate).mul(rate);
        
-       //вычисляем максимальное значение с бонусами, полученное при максимальной покупке
+       //вычисляем максимальное значение с бонусами, полученное при 
+       //максимальной покупке
        maxbonused = (max2buy * (100 +  presaleBonusPercent)) / 100;
    
     }
@@ -108,12 +108,9 @@ contract PreSale is Sale
         //проверяем не будет ли превышен лимит продаж
         require(sold.add(totaltokens) <= saleTokenLimit);
           
-        //Получаем InvestmentsStorage
-        InvestmentsStorage ist = InvestmentsStorage(selector.investmentsStorage());
-        
-        //Отправляем средства в investmentsStorage с указанием отправителя 
-        //и номера этапа 
-        ist.AddWei.value(msg.value)(msg.sender, stagenum);
+        //Учитываем средства в родительском investmentsStorage с указанием 
+        //отправителя 
+        super.AddWei(msg.sender);
         
         //переводим токены покупателю
         token.transferFromAgent(msg.sender, totaltokens); 

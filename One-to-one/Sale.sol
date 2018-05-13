@@ -3,18 +3,22 @@ pragma solidity ^0.4.20;
 
 import 'browser/SafeMath.sol';
 import 'browser/WithSaleAgent.sol';
-
+import 'browser/InvestmentsStorage.sol';
 
 /**
-* Контракт агента продажи токенов APLX. Получает токены на свой счёт и продаёт
-* их в рамках этапа ICO. Полученные средства незамедлительно переводятся на счёт 
-* контракта управления инветстициями InvestmentsStorage. Позволяет вносить
-* временные блокировки на операции с токенами в зависимости от адреса счёта.
+*   Контракт агента продажи токенов APLX. Получает токены на свой счёт и продаёт
+* их в рамках этапа ICO. Полученные средства незамедлительно переводятся на счёт
+* APLEX (multisig родителя InvestmentsStorage) при достижении stagecap
+* или в случае невозвратного этапа. В противном случае средства остаются на 
+* счету контракта продажи до окночания этапа, после чего разюлокируется механизм 
+* возврата средств.
+*   Позволяет вносить временные блокировки на операции с токенами 
+* в зависимости от адреса счёта.
 * 
 * Данный контракт является виртуальным и объявляет минимальные 
 * требования к контракту агента продажи токенов APLX в рамках ICO.
 */
-contract Sale is Ownable, WithVersionSelector 
+contract Sale is Ownable, InvestmentsStorage 
 {
     using SafeMath for uint;
     
@@ -62,6 +66,18 @@ contract Sale is Ownable, WithVersionSelector
    
     //функция окончания продажи агентом токенов (виртуальная)
     function finalizeSale() public returns (bool res);
+    
+    //окончание продажи
+    function finalize() public returns (bool res)
+    {
+        res = finalizeSale();
+        
+        if (res)
+        {
+            //вызов в InvestmentsStorage
+            super.finalizeStage();
+        }
+    }
     
     //время начала
     uint public start;
@@ -177,9 +193,8 @@ contract Sale is Ownable, WithVersionSelector
         //- время меньше окончания
         //- агент совпадает с агентом проажи токена
         //- максимальное количество wei, доступных к оплате >= минимально возможного для вложения или оно не установлено
-        //- известен адрес контракта InvestmentsStorage
         //- не превышен лимит
-        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && (minBuy == 0 || Max2SpendWei() >= minBuy)  && address(selector.investmentsStorage())!=0 && sold < saleTokenLimit;
+        res = now > start && now < saleEnd() &&  token.getAgent() == address(this) && (minBuy == 0 || Max2SpendWei() >= minBuy)  && sold < saleTokenLimit;
     }
     
     
@@ -196,7 +211,8 @@ contract Sale is Ownable, WithVersionSelector
      * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
      *         (Если 0, то без ограничений)
      */
-    function Sale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy) WithVersionSelector(_versionSelectorAddress) public
+    function Sale(       address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable)
+             InvestmentsStorage( _versionSelectorAddress,                                                                                                                                        _stagecap,      _isRefundable)  public
     {
         //получаем адрес токена от селектора
         token = WithSaleAgent(selector.curAPLXTokenAddress());//token=new SimpleAPXToken()
@@ -241,4 +257,3 @@ contract Sale is Ownable, WithVersionSelector
         selfdestruct(owner);
     }
 }
-

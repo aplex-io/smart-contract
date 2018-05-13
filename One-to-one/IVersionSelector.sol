@@ -25,9 +25,6 @@ contract IVersionSelector  {
     //адрес текущего агента распродажи
     address public curSaleAgentAddress;
     
-    //адрес контракта, собирающего инвестиции и управляющего ими
-    address public investmentsStorage;
-
     //установка адреса контракта маркета (пока не используется) 
     function setCurMarketAddress(address _newaddr)  public ;
     
