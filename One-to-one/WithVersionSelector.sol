@@ -14,8 +14,8 @@ contract WithVersionSelector
     
     //Конструктор
     //@param _selector адрес контракта IVersionSelector 
-    function WithVersionSelector(address _selector) public {
-        require(_selector != 0x0);
-        selector=IVersionSelector(_selector);
+    constructor(address _selector) public {
+       require(_selector != 0x0);
+       selector=IVersionSelector(_selector);
     }
 }

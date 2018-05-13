@@ -25,7 +25,7 @@ contract WithSaleAgent is Ownable, WithVersionSelector {
      bool blockExchange=true;
      
      //Конструктор
-     function WithSaleAgent(address _selector) WithVersionSelector(_selector) public {
+     constructor(address _selector) WithVersionSelector(_selector) public {
      
      }
     

@@ -57,7 +57,7 @@ contract InvestmentsStorage is WithVersionSelector
     bool public isRefundable = false;
     
     //конструктор
-    function InvestmentsStorage(address _versionSelectorAddress, uint _stagecap, bool _isRefundable) WithVersionSelector(_versionSelectorAddress) public
+    constructor(address _versionSelectorAddress, uint _stagecap, bool _isRefundable) WithVersionSelector(_versionSelectorAddress) public
     {
         stagecap = _stagecap;
         isRefundable = _isRefundable;

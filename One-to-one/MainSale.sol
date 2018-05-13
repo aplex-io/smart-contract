@@ -43,8 +43,8 @@ contract MainSale is Sale {
      * @param _minVal2Buy uint256 минимально возможная сумма вложения в wei.
      *         (Если 0, то без ограничений)
      */
-    function MainSale(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) 
-                 Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy,      _stagecap,      _isRefundable) public 
+    constructor(address _versionSelectorAddress, address _restrictedAddress, address _reservedAddress, address _bountyAddress, uint _start, uint _maxAccountVal, uint _minVal2Buy, uint _stagecap, bool _isRefundable) 
+           Sale(        _versionSelectorAddress,         _restrictedAddress,         _reservedAddress,         _bountyAddress,      _start,      _maxAccountVal,      _minVal2Buy,      _stagecap,      _isRefundable) public 
    {
         
         //Количество токенов для продажи

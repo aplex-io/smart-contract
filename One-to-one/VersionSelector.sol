@@ -35,7 +35,7 @@ contract VersionSelector is Ownable, IVersionSelector
     Sale public curSaleAgentAddress;
     
     //Конструктор
-    function VersionSelector() public 
+    constructor() public 
     {
         
     }
